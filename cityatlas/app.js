@@ -192,9 +192,17 @@ function renderCompare(){
  ["Home appreciation 10Y","h10",pct],["Home appreciation 20Y","h20",pct],
  ["Typical rent index*","rent",usd],["Rental index growth 5Y","r5",pct],["ACS median household income","inc",usd],
  ["ACS median contract rent","ar",usd],["ACS contract rent / income","cost",pct],
- ["ACS median age","age",nice],["Adults with BA+","edu",pct]];
+ ["ACS median age","age",nice],["Adults with BA+","edu",pct],
+ ["Schools within 15 km","school_access",num],["NPS trailheads within 50 km","nps_access",num],
+ ["Metro BEA regional price index","metro_rpp",nice]];
  pane.innerHTML='<div class="compare-table"><table><thead><tr><th>Measure</th>'+shown.map(c=>'<th>'+e(c.n)+', '+e(c.s)+'</th>').join("")+'</tr></thead><tbody>'+
- specs.map(([label,key,fmt])=>'<tr><td>'+e(label)+'</td>'+shown.map(c=>'<td>'+fmt(c[key])+'</td>').join("")+'</tr>').join("")+'</tbody></table></div>'+
+ specs.map(([label,key,fmt])=>'<tr><td>'+e(label)+'</td>'+shown.map(c=>{
+   const access=geoAccess?.get(c.id);
+   const value=key==="school_access"?access?.schools_15km:
+     key==="nps_access"?access?.nps_trailheads_50km:
+     key==="metro_rpp"?access?.metro_price_index:c[key];
+   return '<td>'+fmt(value)+'</td>';
+ }).join("")+'</tr>').join("")+'</tbody></table></div>'+
  '<div class="fineprint">* Zillow model-based city indexes, not sales or actual listed rentals. Source: Census PEP 2025, ACS 2024 5-year, Zillow Research. Different source periods are not directly interchangeable.</div>';
  const selector=$("history-city"),prior=selector.value;
  selector.innerHTML=shown.map(c=>'<option value="'+e(c.id)+'">'+e(c.n)+', '+e(c.s)+'</option>').join("");
@@ -303,6 +311,12 @@ function rankMatch(c,options){
   else if(v==="lower")score+=Math.max(0,25-Math.max(0,cost-14)*2);
   else score+=Math.max(0,25-Math.abs(cost-22)*1.2);
   if(cost<=24)why.push("Median contract rent / income: "+pct(cost)+" (citywide proxy)");
+  if(access?.metro_price_index!=null){
+    const index=access.metro_price_index;
+    if(options.affordability==="lower")score+=Math.max(0,12-(index-90)*.8);
+    if(options.affordability==="medium")score+=Math.max(0,10-Math.abs(index-100)*.45);
+    why.push("BEA metro price parity "+nice(index)+" (U.S.=100; regional, not city)");
+  }
   if(ceiling!=null)why.push("ACS median contract rent "+usd(c.ar)+" / month within your ceiling");
  }else why.push("Affordability coverage not available");
  if(options.climate==="warm"&&warm.has(c.s)||options.climate==="cool"&&cool.has(c.s)){
@@ -472,7 +486,7 @@ async function loadAmenities(){
  if(!doc){geoAccess=new Map();renderAmenities();return;}
  if(!Array.isArray(doc.places)||doc.places.length<19000)throw Error("Invalid school/outdoor public source coverage");
  geoAccess=new Map(doc.places.map(row=>[row.id,row]));
- renderAmenities();renderMatch();
+ renderAmenities();renderMatch();if(selectedTab==="compare")renderCompare();
 }
 function renderAmenities(){
  const node=$("amenity-table");if(!node)return;
@@ -499,13 +513,15 @@ function renderAmenities(){
    const d=geoAccess?.get(c.id);
    const fmt=v=>v==null?"—":nice(v);
    return '<tr><td><button class="clickcity" data-add="'+c.id+'">'+e(c.n)+', '+e(c.s)+'</button></td>'+
-   '<td>'+e(d?.county_name||"—")+'</td><td class="right">'+num(d?.schools_15km)+'</td>'+
+   '<td>'+e(d?.county_name||"—")+'</td><td>'+e(d?.metro_name||"—")+'</td>'+
+   '<td class="right">'+(d?.metro_price_index==null?"—":nice(d.metro_price_index))+'</td>'+
+   '<td class="right">'+num(d?.schools_15km)+'</td>'+
    '<td class="right">'+fmt(d?.nearest_school_km)+'</td>'+
    '<td class="right">'+num(d?.nps_trailheads_50km)+'</td>'+
    '<td class="right">'+fmt(d?.nearest_nps_trailhead_km)+'</td>'+
    '<td class="right '+diff(d?.county_domestic_net_migration_per_1000)+'">'+
     fmt(d?.county_domestic_net_migration_per_1000)+'</td></tr>';
- }).join("")||'<tr><td colspan="7" class="empty">No cities match these geographic filters.</td></tr>';
+ }).join("")||'<tr><td colspan="9" class="empty">No cities match these geographic filters.</td></tr>';
 }
 async function loadModels(){
  let doc;
