@@ -7,7 +7,7 @@ const pct=v=>v==null?"—":(v>0?"+":"")+Number(v).toFixed(1)+"%";
 const nice=v=>v==null?"—":Number(v).toFixed(1);
 const e=s=>String(s==null?"":s).replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
 const fields=["id","n","s","lat","lon","pop","g1","g5","inc","ar","age","edu","cost","h","h1","h5","h10","h20","rent","r5","f3","tags"];
-let cities=[],shortlist=[],selectedTab="explore",snapshot="featured",filtered=[],migration=null,migrationScope="featured",economy=null;
+let cities=[],shortlist=[],selectedTab="explore",snapshot="featured",filtered=[],migration=null,migrationScope="featured",economy=null,stateBorders=null;
 const eastern=new Set("ME NH VT MA RI CT NY NJ PA DE MD DC VA WV NC SC GA FL".split(" "));
 const southern=new Set("TX OK AR LA MS AL TN KY NC SC GA FL VA WV MD DE DC".split(" "));
 const western=new Set("WA OR CA ID MT WY UT NV AZ NM CO AK HI".split(" "));
@@ -68,6 +68,7 @@ async function loadData(){
  setup();
  loadMigration().catch(err=>{console.warn("Migration source unavailable",err);});
  loadEconomy().catch(err=>{console.warn("Economy source unavailable",err);});
+ loadBoundaries().catch(err=>{console.warn("State geography unavailable",err);});
 }
 function setup(){
  const states=[...new Set(cities.map(c=>c.s))].sort();
@@ -117,10 +118,22 @@ function renderMap(rows){
  const ns="http://www.w3.org/2000/svg",svg=$("map"),g=$("mapdots"),grid=$("grid");
  g.replaceChildren();grid.replaceChildren();
  const p= (lat,lon)=>[65+(lon+126)/61*800,70+(50-lat)/26*350];
- const outline=document.createElementNS(ns,"path");
- outline.setAttribute("class","map-shape");
- outline.setAttribute("d","M83 84 L167 109 L227 98 L292 115 L352 123 L426 125 L483 109 L538 120 L612 106 L668 99 L727 111 L782 85 L839 121 L846 166 L804 191 L799 237 L769 257 L749 299 L702 313 L686 349 L646 370 L619 395 L598 451 L561 402 L515 373 L459 360 L409 371 L363 351 L304 344 L270 322 L242 281 L207 261 L181 214 L141 197 L122 153 L86 136 Z");
- grid.append(outline);
+ if(stateBorders&&Array.isArray(stateBorders.rings)&&stateBorders.rings.length){
+   for(const ring of stateBorders.rings){
+     if(!Array.isArray(ring)||ring.length<3)continue;
+     const path=document.createElementNS(ns,"path");
+     const projected=ring.map(pt=>p(pt[1],pt[0]));
+     path.setAttribute("d",projected.map((xy,i)=>(i?"L":"M")+xy[0].toFixed(1)+" "+xy[1].toFixed(1)).join(" ")+" Z");
+     path.setAttribute("class","map-shape");
+     grid.append(path);
+   }
+ }else{
+   // Conservative fallback while official Census state outlines are unpublished.
+   const outline=document.createElementNS(ns,"path");
+   outline.setAttribute("class","map-shape");
+   outline.setAttribute("d","M83 84 L167 109 L227 98 L292 115 L352 123 L426 125 L483 109 L538 120 L612 106 L668 99 L727 111 L782 85 L839 121 L846 166 L804 191 L799 237 L769 257 L749 299 L702 313 L686 349 L646 370 L619 395 L598 451 L561 402 L515 373 L459 360 L409 371 L363 351 L304 344 L270 322 L242 281 L207 261 L181 214 L141 197 L122 153 L86 136 Z");
+   grid.append(outline);
+ }
  for(let i=0;i<7;i++){
   const line=document.createElementNS(ns,"line");line.setAttribute("class","map-grid");
   line.setAttribute("x1",String(68+i*125));line.setAttribute("x2",String(68+i*125));line.setAttribute("y1","75");line.setAttribute("y2","450");grid.append(line);
@@ -256,6 +269,19 @@ function renderMigration(){
  '<td class="right '+diff(x.domestic)+'">'+num(x.domestic)+'</td><td class="right">'+num(x.international)+'</td>'+
  '<td class="right '+diff(x.rate)+'">'+nice(x.rate)+'</td></tr>').join(""):
  '<tr><td colspan="6" class="empty">No published counties match this selection in the '+e(migrationScope)+' preview.</td></tr>';
+}
+async function loadBoundaries(){
+ try{
+   const res=await fetch("./data/states.json",{cache:"no-cache"});
+   if(!res.ok)return;
+   const data=await res.json();
+   if(data.vintage!==2025||!Array.isArray(data.rings)||data.rings.length<40)
+     throw new Error("Invalid official Census geometry");
+   stateBorders=data;
+   if(selectedTab==="explore")renderMap(filtered);
+ }catch(err){
+   console.warn("Using simplified map until official published boundaries load",err);
+ }
 }
 async function loadEconomy(){
  let doc=null;
