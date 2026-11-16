@@ -30,4 +30,15 @@ window.RQ_PROJECTS = [
     url: 'https://randomquestions-projects.github.io/cricket-greatness-index/',
     theme: 'cricket'
   }
+  {
+    id: 'homekind-apartment-finder',
+    title: 'Homekind · Boston Apartment Finder',
+    shortName: 'HK',
+    domain: 'RENTAL INTELLIGENCE',
+    description: 'Find an apartment that feels like you. Build your apartment DNA, discover private Greater Boston listings, rank matches, compare homes, and evaluate interior style.',
+    categories: ['Housing', 'Personalized Search'],
+    searchKeywords: ['apartment', 'Brookline', 'Coolidge Corner', 'Boston', 'rental', 'housing', 'AI', 'preferences', 'recommendation', 'map'],
+    url: 'https://randomquestions-projects.github.io/apartment-finder/',
+    theme: 'default'
+  }
 ];
