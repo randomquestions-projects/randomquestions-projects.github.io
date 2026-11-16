@@ -279,13 +279,22 @@ function rankMatch(c,options){
  let score=0,why=[];
  const tags=c.tags||[];
  const access=geoAccess?.get(c.id)||null;
+ const size=options.population||"any";
+ if(size==="small"&&c.pop>=100000)return null;
+ if(size==="medium"&&(c.pop<100000||c.pop>500000))return null;
+ if(size==="large"&&c.pop<=500000)return null;
+ const ceiling=options.rent_budget==="any"?null:Number(options.rent_budget);
+ if(ceiling!=null&&c.ar!=null&&c.ar>ceiling)return null;
+ if(ceiling!=null&&c.ar==null)return null;
+ const priority=options.nature_priority||"medium";
+ if(priority==="essential"&&options.nature!=="any"&&!tags.includes(options.nature))return null;
  const reg=options.region;
  if(reg==="east"&&!eastern.has(c.s))return null;
  if(reg==="south"&&!southern.has(c.s))return null;
  if(reg==="west"&&!western.has(c.s))return null;
- if(!tags.length)return null;
+ if(!tags.length&&options.nature!=="any")return null;
  if(options.nature==="any")score+=15;
- else if(tags.includes(options.nature)){score+=40;why.push("Matches preferred landscape (editorial tag)");}
+ else if(tags.includes(options.nature)){score+=priority==="high"?55:priority==="essential"?65:40;why.push("Matches preferred landscape (editorial tag)");}
  if(options.arts==="yes"&&tags.includes("arts")){score+=18;why.push("Creative/arts community candidate");}
  let cost=c.cost;
  if(cost!=null){
@@ -294,11 +303,12 @@ function rankMatch(c,options){
   else if(v==="lower")score+=Math.max(0,25-Math.max(0,cost-14)*2);
   else score+=Math.max(0,25-Math.abs(cost-22)*1.2);
   if(cost<=24)why.push("Median contract rent / income: "+pct(cost)+" (citywide proxy)");
+  if(ceiling!=null)why.push("ACS median contract rent "+usd(c.ar)+" / month within your ceiling");
  }else why.push("Affordability coverage not available");
  if(options.climate==="warm"&&warm.has(c.s)||options.climate==="cool"&&cool.has(c.s)){
   score+=6;why.push("Broad regional climate preference (not a climate model)");
  }
- if(options.nature!=="any"&&!tags.includes(options.nature))score-=14;
+ if(options.nature!=="any"&&!tags.includes(options.nature))score-=priority==="high"?30:14;
  // Do NOT substitute official public school proximity for school quality.
  if(options.schools!=="any"){
    if(access?.schools_15km!=null){
@@ -319,7 +329,7 @@ function rankMatch(c,options){
 }
 function renderMatch(){
  const prefs=Object.fromEntries(new FormData($("matcher-form")).entries());
- const candidates=cities.map(c=>rankMatch(c,prefs)).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,20);
+ const candidates=cities.map(c=>rankMatch(c,prefs)).filter(Boolean).sort((a,b)=>b.score-a.score||b.c.pop-a.c.pop).slice(0,20);
  $("match-results").innerHTML='<div class="match-list">'+(candidates.length?candidates.map((x,i)=>{
   const c=x.c;
   return '<article class="match-card"><div class="match-head"><h3><small>OPTION '+(i+1)+'</small><br>'+e(c.n)+', '+e(c.s)+'</h3><span class="score">'+x.score+' pts*</span></div>'+
