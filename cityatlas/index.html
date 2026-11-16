@@ -18,6 +18,7 @@
     <button data-tab="migration"><span>↗</span> Migration flows</button>
     <button data-tab="housing"><span>▦</span> Real estate</button>
     <button data-tab="economy"><span>▤</span> Jobs & economy</button>
+    <button data-tab="amenities"><span>♧</span> Schools & outdoors</button>
     <button data-tab="emerging"><span>✧</span> Emerging markets</button>
     <button data-tab="compare"><span>⇄</span> Compare cities</button>
     <button data-tab="matcher"><span>♡</span> Where should I live?</button>
@@ -82,9 +83,34 @@
        <div class="table-scroller"><table><thead><tr><th>Geography</th><th>State / metro</th><th class="right">Year</th><th class="right">Price index</th><th class="right">Difference vs U.S.</th></tr></thead><tbody id="rpp-table"></tbody></table></div></div>
       <div class="notice"><b>Employment and affordability are not interchangeable.</b><p>County workplace jobs do not measure resident employment within any individual city. National price parity compares price levels, not cost changes over time. Census contract rent ÷ income is only an affordability indicator, not a full cost-of-living index.</p></div>
     </section>
+    <section id="amenities" class="tab" hidden>
+      <div class="section-intro"><h2>Beyond the<br><em>housing numbers.</em></h2><p>Compare measured public-school and National Park Service trailhead access using official published points and straight-line distances from city representative coordinates.</p></div>
+      <div class="three-info">
+       <article><span>NCES EDGE 2024–25</span><h3>Public schools nearby</h3><p>Number of public-school point locations within 15 km; not enrollment, academic performance or school assignment.</p></article>
+       <article><span>NPS OFFICIAL POIs</span><h3>Outdoor trail access</h3><p>Published National Park Service trailhead locations within 50 km; excludes many state, county and private trails.</p></article>
+       <article><span>2025 CENSUS</span><h3>Geographic connection</h3><p>County containing the city representative point. Cities spanning multiple counties are not fully described by one county.</p></article>
+      </div>
+      <div class="toolbar">
+        <label class="input-wrap"><span>⌕</span><input id="amenity-search" aria-label="Search cities for school access" placeholder="Search a city…"></label>
+        <select id="amenity-state" aria-label="School and outdoor state filter"><option value="">All states</option></select>
+        <select id="amenity-sort" aria-label="Sort geographic access">
+          <option value="schools">Nearby public schools</option>
+          <option value="nearest_school">Nearest public school</option>
+          <option value="trails">NPS trailheads within 50 km</option>
+          <option value="nearest_trail">Nearest NPS trailhead</option>
+          <option value="county_migration">County net domestic migration</option>
+        </select>
+      </div>
+      <section class="panel table-panel">
+        <div class="panel-head"><div><span class="panel-label">SOURCE-BACKED GEOGRAPHIC ACCESS</span><h2>School & outdoor proximity</h2><p>Measured access, not school quality or a recreation score</p></div><span class="pill" id="amenity-count">—</span></div>
+        <div class="table-scroller"><table><thead><tr><th>City</th><th>Representative-point county</th><th class="right">Schools within 15 km</th><th class="right">Nearest school (km)</th><th class="right">NPS trailheads within 50 km</th><th class="right">Nearest trailhead (km)</th><th class="right">County migration / 1K</th></tr></thead><tbody id="amenity-table"></tbody></table></div>
+      </section>
+      <div class="notice"><b>What we do not yet know</b><p>School quality (test results, graduation, teacher ratios), school-district eligibility, road travel time, mountains/beach drive times, state parks and climate hazards still require separate verified datasets. Missing provider data remains blank—not zero.</p></div>
+    </section>
     <section id="emerging" class="tab" hidden>
       <div class="section-intro"><h2>The next growth hotspots</h2><p>An exploratory watchlist comparing recent population acceleration, housing change, and affordability. This screen is not a validated investment forecast.</p></div>
       <div class="three-info"><article><span>01</span><h3>Momentum</h3><p>Is growth accelerating or slowing compared with the past five years?</p></article><article><span>02</span><h3>Housing response</h3><p>Have home values already surged, or is appreciation relatively moderate?</p></article><article><span>03</span><h3>Affordability</h3><p>How do housing costs compare with the local income level?</p></article></div>
+      <section class="panel table-panel" id="model-card"><div class="panel-head"><div><span class="panel-label">ROLLING-ORIGIN BACKTEST · EXPERIMENTAL</span><h2>Migration + affordability housing model</h2><p>Three holdout horizons benchmarked against simple price momentum and zero-change. Predictions only appear if they beat both.</p></div><div id="model-metrics" class="three-info model-metrics"></div><p class="fineprint" id="model-warning">Backtests use currently revised housing histories; true historical release-date vintages are not fully reconstructed. Do not use forecasts for investment decisions.</p></section>
       <div class="panel table-panel"><div class="panel-head"><div><span class="panel-label">EXPLORATORY SIGNALS</span><h2>Observed growth momentum watchlist</h2><p>Population acceleration is an observed statistic, not a predicted return.</p></div></div><div class="table-scroller"><table><thead><tr><th>City</th><th class="right">Population 2025</th><th class="right">Growth 5Y</th><th class="right">Growth 1Y</th><th class="right">Acceleration, pp</th><th class="right">Home change 5Y</th></tr></thead><tbody id="emerging-table"></tbody></table></div></div>
       <div class="notice"><b>Why no “predicted hottest city” ranking yet?</b><p>We have a historically tested Zillow momentum baseline in the private warehouse. A rigorous migration-and-economy model with genuine out-of-time validation is still being developed. We'd rather label this descriptive than overpromise a forecast.</p></div>
     </section>
@@ -102,6 +128,8 @@
         <label>Housing affordability<select name="affordability"><option value="medium">Medium</option><option value="lower">Prioritize lower cost</option><option value="flexible">Flexible</option></select></label>
         <label>Arts & culture<select name="arts"><option value="yes">Important</option><option value="no">Not essential</option></select></label>
         <label>Climate<select name="climate"><option value="any">No preference</option><option value="warm">Warmer preferred</option><option value="cool">Cooler preferred</option></select></label>
+        <label>Public-school proximity<select name="schools"><option value="any">Not a priority</option><option value="some">Some nearby schools</option><option value="many">Many nearby schools</option></select></label>
+        <label>NPS trailhead proximity<select name="trails"><option value="any">Not a priority</option><option value="some">Some nearby trailheads</option><option value="many">Many nearby trailheads</option></select></label>
         <button class="primary" type="submit">Find matching cities →</button>
         </form>
       </div><div class="panel match-panel"><div class="panel-head"><div><span class="panel-label">YOUR RESULTS</span><h2>Best-fitting candidates</h2><p>Transparent preference ranking of an editorial candidate set</p></div></div><div id="match-results"></div></div></div>
