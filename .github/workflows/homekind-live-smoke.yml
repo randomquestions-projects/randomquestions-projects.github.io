@@ -32,7 +32,7 @@ jobs:
           code,headers,raw=call(api+'/v1/search',{'city':'Brookline','page':1,'limit':8},'https://randomquestions-projects.github.io')
           search=json.loads(raw)
           assert code==200 and 0<len(search.get('items',[]))<=8 and search.get('total',0)>0,search
-          assert headers.get('Access-Control-Allow-Origin')=='https://randomquestions-projects.github.io'
+          assert {k.lower():v for k,v in headers.items()}.get('access-control-allow-origin')=='https://randomquestions-projects.github.io',headers
           print('Brookline search',{'returned':len(search['items']),'matching':search['total'],'page':search['page']})
           code,headers,raw=call(api+'/v1/market',origin='https://randomquestions-projects.github.io')
           market=json.loads(raw)
