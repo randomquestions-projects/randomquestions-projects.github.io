@@ -38,6 +38,40 @@ jobs:
           }
           console.log('Validated', payload.cities.length, 'real-city GEOIDs');
           NODE
+      - name: Check public CityAtlas page contract and approved nationwide export
+        run: |
+          node - <<'NODE'
+          const fs=require('fs'),crypto=require('crypto'),assert=require('node:assert/strict');
+          const html=fs.readFileSync('cityatlas/index.html','utf8');
+          for(const id of ['explore','migration','economy','housing','emerging','compare','matcher','methodology',
+                           'jobs-table','flow-table','income-table','rpp-table','match-results']){
+            assert.match(html,new RegExp('id="'+id+'"'),'Missing CityAtlas UI element '+id);
+          }
+          const root='cityatlas/data/';
+          if(fs.existsSync(root+'cities.json')){
+            for(const file of ['cities.json','migration.json','economy.json','states.json','manifest.json'])
+              assert.ok(fs.existsSync(root+file),'Partial public snapshot: missing '+file);
+            const data=JSON.parse(fs.readFileSync(root+'cities.json','utf8'));
+            const migration=JSON.parse(fs.readFileSync(root+'migration.json','utf8'));
+            const economy=JSON.parse(fs.readFileSync(root+'economy.json','utf8'));
+            const states=JSON.parse(fs.readFileSync(root+'states.json','utf8'));
+            const manifest=JSON.parse(fs.readFileSync(root+'manifest.json','utf8'));
+            assert.ok(data.cities.length>=19000,'Nationwide city coverage too low');
+            assert.equal(data.fields.length,22,'Schema mismatch');
+            assert.ok(migration.counties.length>=250);
+            assert.ok(economy.workplace_jobs.length>=600);
+            assert.ok(states.rings.length>=40);
+            assert.equal(crypto.createHash('sha256').update(fs.readFileSync(root+'cities.json')).digest('hex'),
+                         manifest.city_sha256,'Public source digest mismatch');
+            for(const file of ['cities.json','migration.json','economy.json','states.json']){
+              const raw=fs.readFileSync(root+file,'utf8');
+              for(const forbidden of ['CENSUS_API_KEY','BEA_API_KEY','AWS_SECRET_ACCESS_KEY',
+                 'irs_county_flows','source_runs','private_key'])
+                 assert.ok(!raw.includes(forbidden),'Private research marker in '+file);
+            }
+            console.log('Approved 19k-place public source snapshot verified');
+          }else console.log('Featured preview mode; no full public export yet');
+          NODE
       - name: Prevent raw private data in public repo
         run: |
           set -euo pipefail
