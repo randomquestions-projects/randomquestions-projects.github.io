@@ -1,0 +1,50 @@
+name: CityAtlas public site checks
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cityatlas/**'
+      - '.github/workflows/cityatlas-check.yml'
+  pull_request:
+    paths:
+      - 'cityatlas/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify JavaScript syntax
+        run: |
+          node --check cityatlas/app.js
+          node --check cityatlas/preview-data.js
+      - name: Validate source-backed preview data
+        run: |
+          node - <<'NODE'
+          const fs=require('fs'), vm=require('vm'), z=require('zlib'), assert=require('node:assert/strict');
+          const context={}; vm.runInNewContext(fs.readFileSync('cityatlas/preview-data.js','utf8'),context);
+          const payload=JSON.parse(z.gunzipSync(Buffer.from(context.CITYATLAS_PREVIEW_BASE64,'base64')));
+          assert.ok(payload.cities.length>=50);
+          const ids=new Set();
+          for (const row of payload.cities) {
+            assert.match(row[0],/^\d{7}$/);
+            assert.ok(!ids.has(row[0])); ids.add(row[0]);
+            assert.ok(row[5]>0 && Number.isFinite(row[5]));
+          }
+          console.log('Validated', payload.cities.length, 'real-city GEOIDs');
+          NODE
+      - name: Prevent raw private data in public repo
+        run: |
+          set -euo pipefail
+          test ! -f cityatlas/cityatlas.sqlite
+          test ! -d cityatlas/raw
+          test ! -d cityatlas/private
+          if grep -r -E --include='*.js' --include='*.html' 'CENSUS_API_KEY=|BEA_API_KEY=|AWS_SECRET_ACCESS_KEY=|ghp_[A-Za-z0-9]{30}' cityatlas; then
+            echo 'Potential secret in public code' >&2
+            exit 1
+          fi
