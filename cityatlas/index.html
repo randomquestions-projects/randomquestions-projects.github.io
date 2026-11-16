@@ -119,6 +119,11 @@
       <div class="section-intro"><h2>Every city has tradeoffs</h2><p>Build a shortlist and compare population growth, housing, incomes and local demographics side by side.</p></div>
       <div class="compare-controls"><select id="city-picker" aria-label="Choose city for comparison"></select><button id="add-city" class="primary">Add to comparison +</button><button id="clear-cities" class="text-button">Clear all</button></div>
       <div id="chips" class="chips"></div><div id="compare-table" class="panel"></div>
+      <section id="city-history" class="panel historical-panel">
+        <div class="panel-head"><div><span class="panel-label">2000–2025 LONGITUDINAL RESEARCH</span><h2>Annual city history</h2><p>Separate Census population estimate vintages and Zillow historical city indexes; no unqualified cross-vintage growth calculations.</p></div>
+        <select id="history-city" aria-label="Show historic data for selected city"></select></div>
+        <div id="history-body" class="history-body"><p class="empty">Add a city to compare and explore its historical trajectory.</p></div>
+      </section>
     </section>
     <section id="matcher" class="tab" hidden>
       <div class="section-intro"><h2>Find somewhere<br><em>that feels like you.</em></h2><p>Tell us what matters most, and explore a transparent shortlist of candidate cities. Each match explains its tradeoffs.</p></div>
