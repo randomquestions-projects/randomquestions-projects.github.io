@@ -31,6 +31,17 @@ window.RQ_PROJECTS = [
     theme: 'cricket'
   },
   {
+    id: 'cityatlas',
+    title: 'CityAtlas · Where America Is Going',
+    shortName: 'CA',
+    domain: 'MIGRATION & REAL ESTATE',
+    description: 'Explore where Americans are moving, how housing markets evolve, emerging growth signals, and the cities that fit your lifestyle.',
+    categories: ['Demographics', 'Real Estate'],
+    searchKeywords: ['migration', 'population', 'cities', 'housing', 'Zillow', 'growth', 'moving', 'affordability', 'cost of living', 'relocation', 'city finder'],
+    url: 'https://randomquestions-projects.github.io/cityatlas/',
+    theme: 'default'
+  },
+  {
     id: 'homekind-apartment-finder',
     title: 'Homekind · Boston Apartment Finder',
     shortName: 'HK',
