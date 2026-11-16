@@ -1,0 +1,45 @@
+name: Homekind — one-time live API smoke test
+on:
+  push:
+    branches: [main]
+    paths: ['apartment-finder/verify-api-once.txt']
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Verify live rental API and public site configuration
+        env:
+          API: https://ewcshqqsii.execute-api.us-east-2.amazonaws.com
+          SITE: https://randomquestions-projects.github.io/apartment-finder/
+        run: |
+          python - <<'PY'
+          import os,urllib.request,json
+          api=os.environ['API'];site=os.environ['SITE']
+          def call(url,body=None,origin=None):
+              headers={'User-Agent':'Homekind-live-smoke/1.0'}
+              if origin:headers['Origin']=origin
+              if body is not None:headers['Content-Type']='application/json'
+              req=urllib.request.Request(url,data=json.dumps(body).encode() if body is not None else None,headers=headers,method='POST' if body is not None else 'GET')
+              with urllib.request.urlopen(req,timeout=18) as res:
+                  raw=res.read(700000);return res.status,dict(res.headers),raw
+          code,headers,raw=call(api+'/health')
+          obj=json.loads(raw)
+          assert code==200 and obj.get('ok') and obj.get('inventoryReady'),obj
+          print('API health',obj)
+          code,headers,raw=call(api+'/v1/search',{'city':'Brookline','page':1,'limit':8},'https://randomquestions-projects.github.io')
+          search=json.loads(raw)
+          assert code==200 and 0<len(search.get('items',[]))<=8 and search.get('total',0)>0,search
+          assert headers.get('Access-Control-Allow-Origin')=='https://randomquestions-projects.github.io'
+          print('Brookline search',{'returned':len(search['items']),'matching':search['total'],'page':search['page']})
+          code,headers,raw=call(api+'/v1/market',origin='https://randomquestions-projects.github.io')
+          market=json.loads(raw)
+          assert code==200 and market.get('inventoryCount',0)>=1000,market
+          print('Market inventory',market['inventoryCount'])
+          code,headers,raw=call(site+'config.js?smoke=2')
+          cfg=raw.decode()
+          assert 'https://ewcshqqsii.execute-api.us-east-2.amazonaws.com' in cfg,cfg
+          print('Public site API configuration OK')
+          PY
