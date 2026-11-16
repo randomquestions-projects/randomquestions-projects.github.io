@@ -1,0 +1,15 @@
+{
+  "created_utc": "2026-11-16",
+  "place_count": 19483,
+  "city_sha256": "bb79f45f4a87796c1f1c3676e649bf3b278a5e416d119b02f3ef26f6f93a2d40",
+  "migration_sha256": "0063b7d4b7a15c72ab3d57210bf1a9b754964776687060c52c8642bcfa4a88d1",
+  "economy_sha256": "3e1d30f543318f14c4a67057ad91465c603596913770c4bf93f1678a8a3c5fb1",
+  "exports": [
+    "cities.json",
+    "migration.json",
+    "economy.json",
+    "states.json"
+  ],
+  "privacy": "Aggregate-only allowlist; research warehouse, raw sources and model code excluded",
+  "states_sha256": "2982a7caa6bbf506ba367c47ab4b54dc1ce908a2af5d58fd0cf972e9862a1407"
+}
