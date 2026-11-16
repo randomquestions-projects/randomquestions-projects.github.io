@@ -7,7 +7,7 @@ const pct=v=>v==null?"—":(v>0?"+":"")+Number(v).toFixed(1)+"%";
 const nice=v=>v==null?"—":Number(v).toFixed(1);
 const e=s=>String(s==null?"":s).replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
 const fields=["id","n","s","lat","lon","pop","g1","g5","inc","ar","age","edu","cost","h","h1","h5","h10","h20","rent","r5","f3","tags"];
-let cities=[],shortlist=[],selectedTab="explore",snapshot="featured",filtered=[];
+let cities=[],shortlist=[],selectedTab="explore",snapshot="featured",filtered=[],migration=null,migrationScope="featured";
 const eastern=new Set("ME NH VT MA RI CT NY NJ PA DE MD DC VA WV NC SC GA FL".split(" "));
 const southern=new Set("TX OK AR LA MS AL TN KY NC SC GA FL VA WV MD DE DC".split(" "));
 const western=new Set("WA OR CA ID MT WY UT NV AZ NM CO AK HI".split(" "));
@@ -22,7 +22,8 @@ function showTab(tab){
  document.querySelectorAll(".tab").forEach(n=>n.hidden=n.id!==tab);
  document.querySelectorAll("#nav button").forEach(n=>n.classList.toggle("active",n.dataset.tab===tab));
  const headlines={
- explore:["Where America<br><em>is going.</em>","Understand where people are moving, how cities are changing, and which places might fit your future.","NATIONAL OVERVIEW"],
+ explore:["Where America<br><em>is going.</em>","Understand how cities are changing, and which places might fit your future.","NATIONAL OVERVIEW"],
+ migration:["Follow the<br><em>movement.</em>","Explore net domestic migration and actual origin–destination flows.","MIGRATION FLOWS"],
  housing:["The housing<br><em>story.</em>","Track historical appreciation and affordability using observed housing and Census data.","REAL ESTATE"],
  emerging:["Spot early<br><em>momentum.</em>","Explore observed changes before building predictive conclusions.","EMERGING MARKETS"],
  compare:["Compare<br><em>your options.</em>","Look beyond headline growth and study the tradeoffs between cities.","CITY COMPARISON"],
@@ -32,6 +33,7 @@ function showTab(tab){
  const [title,subtitle,crumb]=headlines[tab]||headlines.explore;
  $("title").innerHTML=title;$("subtitle").textContent=subtitle;$("crumb").textContent=crumb;
  window.scrollTo({top:0,behavior:"instant"});
+ if(tab==="migration")renderMigration();
  if(tab==="housing")renderHousing();
  if(tab==="emerging")renderEmerging();
  if(tab==="compare")renderCompare();
@@ -62,6 +64,7 @@ async function loadData(){
    "Nationwide published city aggregate snapshot. Source vintages and coverage vary by indicator; missing values stay blank.":
    "PUBLIC PREVIEW · "+num(cities.length)+" featured, source-backed cities. The private warehouse covers 19,483 places; this published preview is a curated selection, not a complete national ranking.";
  setup();
+ loadMigration().catch(err=>{console.warn("Migration source unavailable",err);});
 }
 function setup(){
  const states=[...new Set(cities.map(c=>c.s))].sort();
@@ -82,6 +85,7 @@ function setup(){
   if(ev.key==="Enter"&&ev.target.matches("[data-add]"))selectCity(ev.target.dataset.add);
  });
  renderMethods();renderExplore();renderHousing();renderEmerging();renderCompare();renderMatch();
+ ["migration-state","migration-year","migration-direction"].forEach(id=>$(id).addEventListener("change",renderMigration));
 }
 function queryRows(){
  const state=$("state").value,term=$("search").value.trim().toLowerCase(),min=Number($("population").value),sort=$("sort").value;
@@ -202,7 +206,7 @@ function renderMatch(){
 }
 function renderMethods(){
  const blocks=[
- ["What is this public dataset?","The current preview is a curated subset of 117 real U.S. incorporated places selected to span large cities, high-growth markets and relocation candidates. It is NOT a comprehensive national ranking yet. The private research warehouse contains 19,483 places. Full geographic coverage will be published only through a validated, restricted aggregate export."],
+ ["What is this public dataset?","The current preview is a curated subset of 63 real U.S. incorporated places selected to span large cities, high-growth markets and relocation candidates. It is NOT a comprehensive national ranking yet. The private research warehouse contains 19,483 places. Full geographic coverage will be published only through a validated, restricted aggregate export."],
  ["Population and migration","City population and 2020–2025 growth come from the U.S. Census Bureau Population Estimates Program (2025 vintage). Simple city growth is NOT proof that residents moved in from other areas: births, deaths, and boundaries matter. The private warehouse also contains IRS county tax-return flows and Census county net domestic migration."],
  ["Historical geography","The warehouse contains 2000–2009, 2010–2019, and 2020–2025 Census place histories. Each decade has its own estimate vintage and potentially different boundaries. We do not splice them into a misleading continuous 25-year percentage change."],
  ["Housing values and rents","ZHVI/ZORI are Zillow statistical indexes, not median sale prices, realized investment returns, or rental offers. The 1-, 5-, 10-, and 20-year percentages are observed nominal changes based on source availability, not predictions. Data provided by Zillow Group. <a href='https://www.zillow.com/research/data/' target='_blank' rel='noopener'>Zillow Research</a>."],
@@ -212,6 +216,42 @@ function renderMethods(){
  ["Data provenance and privacy","Research code, source dumps, model training, raw research tables, credentials, and the secure S3 warehouse remain private. Only constrained derived aggregates are used on this public site. No trackers, user accounts or stored preference data are required. All preference matching runs locally in your browser."]
  ];
  $("methods").innerHTML=blocks.map(([title,body])=>'<article class="method-card"><h3>'+e(title)+'</h3><p>'+body+'</p></article>').join("");
+}
+async function loadMigration(){
+ let data;
+ try{const response=await fetch("./data/migration.json",{cache:"no-cache"});if(response.ok){data=await response.json();migrationScope="national";}}catch(err){}
+ if(!data){
+  const b64=window.CITYATLAS_MIGRATION_PREVIEW_BASE64;
+  if(!b64||typeof DecompressionStream!=="function")return;
+  const raw=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+  const stream=new Blob([raw]).stream().pipeThrough(new DecompressionStream("gzip"));
+  data=JSON.parse(await new Response(stream).text());migrationScope="featured";
+ }
+ const counties=(data.counties||[]).map(x=>Array.isArray(x)?{id:x[0],name:x[1],state:x[2],pop:x[3],domestic:x[4],international:x[5],rate:x[6]}:x);
+ const flows=(data.state_flows||[]).map(x=>Array.isArray(x)?{orig:x[0],dest:x[1],returns:x[2],persons:x[3],year:x[4]}:x);
+ migration={counties,flows};
+ const states=[...new Set([...counties.map(x=>x.state),...flows.map(x=>x.orig),...flows.map(x=>x.dest)])].filter(Boolean).sort();
+ $("migration-state").innerHTML='<option value="">All states</option>'+states.map(x=>'<option value="'+e(x)+'">'+e(x)+'</option>').join("");
+ renderMigration();
+}
+function renderMigration(){
+ if(!migration){$("flow-table").innerHTML='<tr><td colspan="5">Loading migration research…</td></tr>';return;}
+ const st=$("migration-state").value,year=Number($("migration-year").value),dir=$("migration-direction").value;
+ const flow=migration.flows.filter(x=>x.year===year&&(!st||(dir==="inbound"?x.dest===st:x.orig===st)))
+     .sort((a,b)=>b.returns-a.returns);
+ $("flow-count").textContent=num(flow.length)+" routes";
+ $("flow-table").innerHTML=flow.length?flow.slice(0,180).map(x=>
+ '<tr><td>'+e(x.orig)+'</td><td>'+e(x.dest)+'</td><td class="right">'+num(x.returns)+'</td>'+
+ '<td class="right">'+num(x.persons)+'</td><td class="right">'+e(x.year)+'</td></tr>').join(""):
+ '<tr><td colspan="5" class="empty">No released flow records for this selection in the '+e(migrationScope)+' public snapshot.</td></tr>';
+ const count=migration.counties.filter(x=>!st||x.state===st)
+     .sort((a,b)=>dir==="outbound"?a.rate-b.rate:b.rate-a.rate);
+ $("county-count").textContent=num(count.length)+" counties";
+ $("county-table").innerHTML=count.length?count.slice(0,180).map(x=>
+ '<tr><td>'+e(x.name)+'</td><td>'+e(x.state)+'</td><td class="right">'+num(x.pop)+'</td>'+
+ '<td class="right '+diff(x.domestic)+'">'+num(x.domestic)+'</td><td class="right">'+num(x.international)+'</td>'+
+ '<td class="right '+diff(x.rate)+'">'+nice(x.rate)+'</td></tr>').join(""):
+ '<tr><td colspan="6" class="empty">No published counties match this selection in the '+e(migrationScope)+' preview.</td></tr>';
 }
 loadData().catch(err=>{$("scope").textContent="CityAtlas data unavailable: "+err.message;console.error(err);});
 })();
