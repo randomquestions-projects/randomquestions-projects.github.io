@@ -27,8 +27,8 @@ jobs:
         run: |
           node - <<'NODE'
           const fs=require('fs'), vm=require('vm'), z=require('zlib'), assert=require('node:assert/strict');
-          const context={}; vm.runInNewContext(fs.readFileSync('cityatlas/preview-data.js','utf8'),context);
-          const payload=JSON.parse(z.gunzipSync(Buffer.from(context.CITYATLAS_PREVIEW_BASE64,'base64')));
+          const context={window:{}}; vm.runInNewContext(fs.readFileSync('cityatlas/preview-data.js','utf8'),context);
+          const payload=JSON.parse(z.gunzipSync(Buffer.from(context.window.CITYATLAS_PREVIEW_BASE64,'base64')));
           assert.ok(payload.cities.length>=50);
           const ids=new Set();
           for (const row of payload.cities) {
