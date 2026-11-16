@@ -7,7 +7,7 @@ const pct=v=>v==null?"—":(v>0?"+":"")+Number(v).toFixed(1)+"%";
 const nice=v=>v==null?"—":Number(v).toFixed(1);
 const e=s=>String(s==null?"":s).replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
 const fields=["id","n","s","lat","lon","pop","g1","g5","inc","ar","age","edu","cost","h","h1","h5","h10","h20","rent","r5","f3","tags"];
-let cities=[],shortlist=[],selectedTab="explore",snapshot="featured",filtered=[],migration=null,migrationScope="featured",economy=null,stateBorders=null;
+let cities=[],shortlist=[],selectedTab="explore",snapshot="featured",filtered=[],migration=null,migrationScope="featured",economy=null,stateBorders=null,geoAccess=null,models=null;
 const eastern=new Set("ME NH VT MA RI CT NY NJ PA DE MD DC VA WV NC SC GA FL".split(" "));
 const southern=new Set("TX OK AR LA MS AL TN KY NC SC GA FL VA WV MD DE DC".split(" "));
 const western=new Set("WA OR CA ID MT WY UT NV AZ NM CO AK HI".split(" "));
@@ -26,6 +26,7 @@ function showTab(tab){
  migration:["Follow the<br><em>movement.</em>","Explore net domestic migration and actual origin–destination flows.","MIGRATION FLOWS"],
  housing:["The housing<br><em>story.</em>","Track historical appreciation and affordability using observed housing and Census data.","REAL ESTATE"],
  economy:["Jobs drive<br><em>the movement.</em>","Understand growing industries, household incomes and regional cost-of-living differences.","JOBS & ECONOMY"],
+ amenities:["Schools, trails<br><em>and place.</em>","Explore independently measured access to public schools and NPS trailheads.","SCHOOLS & OUTDOORS"],
  emerging:["Spot early<br><em>momentum.</em>","Explore observed changes before building predictive conclusions.","EMERGING MARKETS"],
  compare:["Compare<br><em>your options.</em>","Look beyond headline growth and study the tradeoffs between cities.","CITY COMPARISON"],
  matcher:["Find your next<br><em>home base.</em>","Make your relocation priorities explicit and uncover candidate places.","PERSONAL CITY MATCH"],
@@ -37,6 +38,7 @@ function showTab(tab){
  if(tab==="migration")renderMigration();
  if(tab==="housing")renderHousing();
  if(tab==="economy")renderEconomy();
+ if(tab==="amenities")renderAmenities();
  if(tab==="emerging")renderEmerging();
  if(tab==="compare")renderCompare();
  if(tab==="matcher")renderMatch();
@@ -69,6 +71,8 @@ async function loadData(){
  loadMigration().catch(err=>{console.warn("Migration source unavailable",err);});
  loadEconomy().catch(err=>{console.warn("Economy source unavailable",err);});
  loadBoundaries().catch(err=>{console.warn("State geography unavailable",err);});
+ loadAmenities().catch(err=>{console.warn("Geographic-access source unavailable",err);});
+ loadModels().catch(err=>{console.warn("Forecast validation unavailable",err);});
 }
 function setup(){
  const states=[...new Set(cities.map(c=>c.s))].sort();
@@ -91,6 +95,7 @@ function setup(){
  renderMethods();renderExplore();renderHousing();renderEmerging();renderCompare();renderMatch();
  ["migration-state","migration-year","migration-direction"].forEach(id=>$(id).addEventListener("change",renderMigration));
  ["jobs-state","jobs-sector"].forEach(id=>$(id).addEventListener("change",renderEconomy));
+ ["amenity-state","amenity-sort","amenity-search"].forEach(id=>$(id).addEventListener(id==="amenity-search"?"input":"change",renderAmenities));
 }
 function queryRows(){
  const state=$("state").value,term=$("search").value.trim().toLowerCase(),min=Number($("population").value),sort=$("sort").value;
@@ -188,6 +193,7 @@ function renderCompare(){
 function rankMatch(c,options){
  let score=0,why=[];
  const tags=c.tags||[];
+ const access=geoAccess?.get(c.id)||null;
  const reg=options.region;
  if(reg==="east"&&!eastern.has(c.s))return null;
  if(reg==="south"&&!southern.has(c.s))return null;
@@ -208,6 +214,22 @@ function rankMatch(c,options){
   score+=6;why.push("Broad regional climate preference (not a climate model)");
  }
  if(options.nature!=="any"&&!tags.includes(options.nature))score-=14;
+ // Do NOT substitute official public school proximity for school quality.
+ if(options.schools!=="any"){
+   if(access?.schools_15km!=null){
+     const count=access.schools_15km;
+     const value=options.schools==="many"?Math.min(15,count/5):Math.min(15,count/2);
+     score+=value;
+     why.push(num(count)+" NCES public-school locations within 15 km");
+   } else why.push("No verified nearby-school coverage");
+ }
+ if(options.trails!=="any"){
+   if(access?.nps_trailheads_50km!=null){
+     const count=access.nps_trailheads_50km;
+     score+=options.trails==="many"?Math.min(15,count*1.5):Math.min(15,count*4);
+     why.push(num(count)+" NPS trailheads within 50 km");
+   } else why.push("No verified NPS trailhead coverage");
+ }
  return {c,score:Math.round(score),why};
 }
 function renderMatch(){
@@ -339,6 +361,82 @@ function renderEconomy(){
    '<td class="right">'+num(x.year)+'</td><td class="right">'+nice(x.index_value)+'</td>'+
    '<td class="right '+diff(x.index_value-100)+'">'+pct(x.index_value-100)+'</td></tr>').join(""):
    '<tr><td colspan="5" class="empty">BEA regional price parity import is still under validation. An unavailable index is not a zero-cost region.</td></tr>';
+}
+
+async function loadAmenities(){
+ let doc=null;
+ try{
+   const response=await fetch("./data/amenities.json",{cache:"no-cache"});
+   if(response.ok)doc=await response.json();
+ }catch(err){}
+ if(!doc){geoAccess=new Map();renderAmenities();return;}
+ if(!Array.isArray(doc.places)||doc.places.length<19000)throw Error("Invalid school/outdoor public source coverage");
+ geoAccess=new Map(doc.places.map(row=>[row.id,row]));
+ renderAmenities();renderMatch();
+}
+function renderAmenities(){
+ const node=$("amenity-table");if(!node)return;
+ if($("amenity-state").options.length<=1){
+   $("amenity-state").innerHTML='<option value="">All states</option>'+
+     [...new Set(cities.map(c=>c.s))].sort().map(s=>'<option value="'+e(s)+'">'+e(s)+'</option>').join("");
+ }
+ const state=$("amenity-state").value,term=$("amenity-search").value.trim().toLowerCase(),
+       sort=$("amenity-sort").value;
+ const keys={schools:"schools_15km",nearest_school:"nearest_school_km",
+    trails:"nps_trailheads_50km",nearest_trail:"nearest_nps_trailhead_km",
+    county_migration:"county_domestic_net_migration_per_1000"};
+ let rows=cities.filter(c=>(!state||c.s===state)&&(!term||(c.n+" "+c.s).toLowerCase().includes(term)));
+ const key=keys[sort]||keys.schools;
+ const ascending=sort==="nearest_school"||sort==="nearest_trail";
+ rows.sort((a,b)=>{
+   const x=geoAccess?.get(a.id)?.[key],y=geoAccess?.get(b.id)?.[key];
+   if(x==null&&y==null)return b.pop-a.pop;
+   if(x==null)return 1;if(y==null)return -1;
+   return ascending?x-y:y-x;
+ });
+ $("amenity-count").textContent=num(rows.length)+" cities";
+ node.innerHTML=rows.slice(0,250).map(c=>{
+   const d=geoAccess?.get(c.id);
+   const fmt=v=>v==null?"—":nice(v);
+   return '<tr><td><button class="clickcity" data-add="'+c.id+'">'+e(c.n)+', '+e(c.s)+'</button></td>'+
+   '<td>'+e(d?.county_name||"—")+'</td><td class="right">'+num(d?.schools_15km)+'</td>'+
+   '<td class="right">'+fmt(d?.nearest_school_km)+'</td>'+
+   '<td class="right">'+num(d?.nps_trailheads_50km)+'</td>'+
+   '<td class="right">'+fmt(d?.nearest_nps_trailhead_km)+'</td>'+
+   '<td class="right '+diff(d?.county_domestic_net_migration_per_1000)+'">'+
+    fmt(d?.county_domestic_net_migration_per_1000)+'</td></tr>';
+ }).join("")||'<tr><td colspan="7" class="empty">No cities match these geographic filters.</td></tr>';
+}
+async function loadModels(){
+ let doc;
+ try{
+  const response=await fetch("./data/models.json",{cache:"no-cache"});
+  if(response.ok)doc=await response.json();
+ }catch(err){}
+ if(!doc){models={holdout:[],conditionally_published_forecasts:[]};renderModels();return;}
+ if(!Array.isArray(doc.holdout)||!Array.isArray(doc.conditionally_published_forecasts))
+   throw Error("Invalid published housing model diagnostics");
+ models=doc;renderModels();
+}
+function renderModels(){
+ const node=$("model-metrics");
+ if(!node)return;
+ const tests=models?.holdout||[];
+ const good=tests.filter(t=>t.better_than_both===1);
+ node.innerHTML=tests.length?tests.map(t=>{
+   const valid=t.better_than_both===1;
+   return '<article><span>'+e(t.horizon)+'-YEAR HOUSING CHANGE</span>'+
+    '<h3>'+nice(t.model_mae_pp)+' pp model MAE</h3>'+
+    '<p>Momentum: '+nice(t.momentum_mae_pp)+' pp · Zero-change: '+nice(t.zero_mae_pp)+' pp</p>'+
+    '<p>'+num(t.test_count)+' historical test observations · '+(valid?
+      'Passed both baseline gates':'Did not beat both baselines; predictions withheld')+'</p></article>';
+ }).join(""):'<article><h3>Validation pending</h3><p>New model results have not been published yet. The descriptive city momentum watchlist remains available.</p></article>';
+ if(models){
+   $("model-warning").textContent=
+     "Model validation is retrospective, using current-revised Zillow histories and lagged IRS state tax-return data. "+
+     good.length+" of "+tests.length+" horizons beat both simple benchmarks. "+
+     "No causal migration effect is established and error bands are empirical, not guaranteed.";
+ }
 }
 loadData().catch(err=>{$("scope").textContent="CityAtlas data unavailable: "+err.message;console.error(err);});
 })();
