@@ -97,6 +97,7 @@ function setup(){
  renderMethods();renderExplore();renderHousing();renderEmerging();renderCompare();renderMatch();
  ["migration-state","migration-year","migration-county-year","migration-direction"].forEach(id=>$(id).addEventListener("change",renderMigration));
  ["jobs-state","jobs-sector"].forEach(id=>$(id).addEventListener("change",()=>{renderEconomy();renderDailyLife();}));
+ ["bea-rpp-year","bea-rpp-kind"].forEach(id=>$(id).addEventListener("change",renderEconomy));
  ["amenity-state","amenity-sort","amenity-search"].forEach(id=>$(id).addEventListener(id==="amenity-search"?"input":"change",renderAmenities));
 }
 function queryRows(){
@@ -437,6 +438,9 @@ async function loadEconomy(){
  if(!Array.isArray(doc.workplace_jobs)||!Array.isArray(doc.regional_price_parities))
    throw new Error("Malformed published economy aggregate data");
  economy=doc;
+ const years=[...new Set(doc.regional_price_parities.map(r=>r.year))].sort((a,b)=>b-a);
+ $("bea-rpp-year").innerHTML=years.map(y=>'<option value="'+y+'">'+y+' regional price level</option>').join("");
+ $("bea-rpp-year").value=years.includes(2024)?"2024":String(years[0]||2024);
  renderEconomy();
 }
 function renderEconomy(){
@@ -470,8 +474,9 @@ function renderEconomy(){
   '<td class="right">'+num(c.pop)+'</td><td class="right">'+usd(c.inc)+'</td>'+
   '<td class="right">'+nice(c.age)+'</td><td class="right">'+pct(c.edu)+'</td></tr>').join("")||
   '<tr><td colspan="5" class="empty">No ACS city records match this state.</td></tr>';
- const latest=(economy?.regional_price_parities||[]).filter(x=>x.year===2024&&(!st||(x.geography==="state"&&x.geo_id===st)));
- const usable=latest.length?latest:(economy?.regional_price_parities||[]).filter(x=>(!st||(x.geography==="state"&&x.geo_id===st))).sort((a,b)=>b.year-a.year).slice(0,100);
+ const requestedYear=Number($("bea-rpp-year").value||"2024"),kind=$("bea-rpp-kind").value;
+ const latest=(economy?.regional_price_parities||[]).filter(x=>x.year===requestedYear&&x.geography===kind&&(!st||(x.geography==="state"&&x.geo_id===st)));
+ const usable=latest;
  usable.sort((a,b)=>b.index_value-a.index_value);
  $("rpp-table").innerHTML=usable.length?usable.slice(0,150).map(x=>
    '<tr><td>'+e(x.geography)+'</td><td>'+e(x.geo_name)+'</td>'+
