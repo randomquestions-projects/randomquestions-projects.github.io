@@ -44,7 +44,7 @@ jobs:
           const fs=require('fs'),crypto=require('crypto'),assert=require('node:assert/strict');
           const html=fs.readFileSync('cityatlas/index.html','utf8');
           for(const id of ['explore','migration','economy','housing','emerging','compare','matcher','methodology',
-                           'jobs-table','flow-table','income-table','rpp-table','match-results']){
+                           'jobs-table','flow-table','income-table','rpp-table','match-results','amenity-table','model-metrics']){
             assert.match(html,new RegExp('id="'+id+'"'),'Missing CityAtlas UI element '+id);
           }
           const root='cityatlas/data/';
@@ -56,6 +56,28 @@ jobs:
             const economy=JSON.parse(fs.readFileSync(root+'economy.json','utf8'));
             const states=JSON.parse(fs.readFileSync(root+'states.json','utf8'));
             const manifest=JSON.parse(fs.readFileSync(root+'manifest.json','utf8'));
+            const availableExtra=['amenities.json','models.json'];
+            for(const file of availableExtra){
+              if(manifest.exports.includes(file)){
+                assert.ok(fs.existsSync(root+file),'Manifest lists missing '+file);
+                const key=file.replace('.json','')+'_sha256';
+                assert.equal(crypto.createHash('sha256').update(fs.readFileSync(root+file)).digest('hex'),
+                             manifest[key],'Aggregate source digest mismatch: '+file);
+              }
+            }
+            if(fs.existsSync(root+'amenities.json')){
+              const access=JSON.parse(fs.readFileSync(root+'amenities.json','utf8'));
+              assert.ok(access.places.length>=19000,'Insufficient official city geographic coverage');
+              assert.ok(access.coverage.cities>=19000);
+            }
+            if(fs.existsSync(root+'models.json')){
+              const model=JSON.parse(fs.readFileSync(root+'models.json','utf8'));
+              assert.ok(model.holdout.length>=1,'Missing rolling-origin validation');
+              for(const f of model.conditionally_published_forecasts){
+                const test=model.holdout.find(x=>x.horizon===f.horizon);
+                assert.ok(test?.better_than_both===1,'Cannot publish a forecast failing benchmark gates');
+              }
+            }
             assert.ok(data.cities.length>=19000,'Nationwide city coverage too low');
             assert.equal(data.fields.length,22,'Schema mismatch');
             assert.ok(migration.counties.length>=250);
@@ -63,7 +85,8 @@ jobs:
             assert.ok(states.rings.length>=40);
             assert.equal(crypto.createHash('sha256').update(fs.readFileSync(root+'cities.json')).digest('hex'),
                          manifest.city_sha256,'Public source digest mismatch');
-            for(const file of ['cities.json','migration.json','economy.json','states.json']){
+            for(const file of ['cities.json','migration.json','economy.json','states.json',
+              ...availableExtra.filter(x=>fs.existsSync(root+x))]){
               const raw=fs.readFileSync(root+file,'utf8');
               for(const forbidden of ['CENSUS_API_KEY','BEA_API_KEY','AWS_SECRET_ACCESS_KEY',
                  'irs_county_flows','source_runs','private_key'])
