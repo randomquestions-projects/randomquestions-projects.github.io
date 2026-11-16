@@ -8,8 +8,9 @@
   <meta name="referrer" content="no-referrer" />
   <title>Homekind — Boston Apartment Finder | Random Questions</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="./styles.css?v=1" />
-  <script src="./app.js?v=1" defer></script>
+  <link rel="stylesheet" href="./styles.css?v=2" />
+  <script src="./config.js?v=2" defer></script>
+  <script src="./app.js?v=2" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -27,15 +28,15 @@
       <button type="button" data-view="vision" class="nav-button"><span class="nav-icon">◈</span> Visual analysis</button>
     </nav>
     <div class="sidebar-bottom">
-      <div class="data-status"><span class="status-light" id="status-light"></span><span id="sidebar-data-status">Private data locked</span></div>
-      <button id="open-data" class="subtle-button" type="button">Data & privacy settings <span>↗</span></button>
+      <div class="data-status"><span class="status-light" id="status-light"></span><span id="sidebar-data-status">Checking listings</span></div>
+      <button id="open-data" class="subtle-button" type="button">Data & privacy <span>↗</span></button>
       <div class="sidebar-footer"><a href="https://randomquestions-projects.github.io/">← All projects</a><span>Boston · MA</span></div>
     </div>
   </aside>
   <div class="content-area">
     <header class="topbar">
       <div class="crumb">THE BOSTON APARTMENT FINDER <span class="muted-divider">/</span> <span id="crumb-view">Discover</span></div>
-      <div class="top-actions"><span class="location-pill">⌖ Greater Boston</span><button id="top-data" class="top-data" type="button">◉ <span id="top-data-label">Unlock inventory</span></button><button id="top-quiz" class="primary-button small" type="button">✧ Take the vibe quiz</button></div>
+      <div class="top-actions"><span class="location-pill">⌖ Greater Boston</span><button id="top-data" class="top-data" type="button">◉ <span id="top-data-label">Service status</span></button><button id="top-quiz" class="primary-button small" type="button">✧ Take the vibe quiz</button></div>
     </header>
     <main id="main" tabindex="-1">
       <section id="view-discover" class="view active" aria-labelledby="discover-title">
@@ -48,17 +49,17 @@
         <div id="pagination" class="pagination"></div>
       </section>
       <section id="view-taste" class="view" aria-labelledby="taste-title"><div class="page-heading"><div class="eyebrow">APARTMENT DNA</div><h1 id="taste-title">Let's find your kind of home.</h1><p>A quick visual and practical assessment tells us more than a hundred generic filters.</p></div><div id="taste-content"></div></section>
-      <section id="view-map" class="view" aria-labelledby="map-title"><div class="page-heading compact"><div class="eyebrow">WHERE YOUR LIFE HAPPENS</div><h1 id="map-title">The neighborhood view.</h1><p>See how your matches relate to Coolidge Corner and the neighborhoods you care about. Distances are straight-line estimates, not commute times.</p></div><div class="map-layout"><div class="map-wrapper"><div id="geo-map" class="geo-map" role="application" aria-label="Map of Boston apartment listings"><div class="map-loading">Map loads after you unlock inventory.</div></div><div class="map-caption">Map tiles © OpenStreetMap contributors · Locations based on provider records</div></div><div class="map-right"><h3>Best nearby matches</h3><div id="map-results"></div></div></div></section>
+      <section id="view-map" class="view" aria-labelledby="map-title"><div class="page-heading compact"><div class="eyebrow">WHERE YOUR LIFE HAPPENS</div><h1 id="map-title">The neighborhood view.</h1><p>See how your matches relate to Coolidge Corner and the neighborhoods you care about. Distances are straight-line estimates, not commute times.</p></div><div class="map-layout"><div class="map-wrapper"><div id="geo-map" class="geo-map" role="application" aria-label="Map of Boston apartment listings"><div class="map-loading">Map connects to the private search service.</div></div><div class="map-caption">Map tiles © OpenStreetMap contributors · Locations based on provider records</div></div><div class="map-right"><h3>Best nearby matches</h3><div id="map-results"></div></div></div></section>
       <section id="view-saved" class="view" aria-labelledby="saved-title"><div class="page-heading"><div class="eyebrow">THE SHORTLIST</div><h1 id="saved-title">Homes worth a second look.</h1><p>Your saved apartments stay on this device. Add notes and compare your favorites.</p></div><div id="saved-list" class="listing-grid"></div></section>
       <section id="view-compare" class="view" aria-labelledby="compare-title"><div class="page-heading"><div class="eyebrow">SIDE BY SIDE</div><h1 id="compare-title">Make the trade-offs clear.</h1><p>Compare up to four listings on the attributes we actually know, without pretending missing amenities are confirmed.</p></div><div id="comparison-view"></div></section>
       <section id="view-market" class="view" aria-labelledby="market-title"><div class="page-heading"><div class="eyebrow">KNOW THE MARKET</div><h1 id="market-title">Rent smarter, not harder.</h1><p>Understand asking rents, your search area, and where your budget stretches. All results are descriptive, not an appraisal.</p></div><div id="market-content"></div></section>
       <section id="view-vision" class="view" aria-labelledby="vision-title"><div class="page-heading"><div class="eyebrow">YOUR TASTE, MEET COMPUTER VISION</div><h1 id="vision-title">See a listing before you love it.</h1><p>Analyze photos you choose, entirely on your device. The AI model downloads only after you opt in. Listing photos are never invented.</p></div><div id="vision-content"></div></section>
     </main>
-    <footer class="footer"><span>Homekind · A Random Questions project</span><span>Listing data stays encrypted until you unlock it. Check listing availability with the source.</span></footer>
+    <footer class="footer"><span>Homekind · A Random Questions project</span><span>Source-backed listings; no public bulk dataset. Verify availability with the source.</span></footer>
   </div>
 </div>
 <div id="modal-backdrop" class="modal-backdrop" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-top"><div><div class="eyebrow" id="modal-eyebrow">DETAILS</div><h2 id="modal-title">Apartment</h2></div><button id="modal-close" class="icon-button" type="button" aria-label="Close dialog">×</button></div><div id="modal-body"></div></section></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<noscript><p>This interactive apartment finder requires JavaScript. Your private records are never embedded in readable form on the public website.</p></noscript>
+<noscript><p>This interactive apartment finder requires JavaScript. Only small search results are served through a separate protected backend.</p></noscript>
 </body>
 </html>
