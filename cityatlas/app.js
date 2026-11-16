@@ -571,9 +571,12 @@ function renderModels(){
       'Passed both baseline gates':'Did not beat both baselines; predictions withheld')+'</p></article>';
  }).join(""):'<article><h3>Validation pending</h3><p>New model results have not been published yet. The descriptive city momentum watchlist remains available.</p></article>';
  if(models){
+   const longHorizon=tests.find(t=>t.horizon===5);
+   const origins=longHorizon?JSON.parse(longHorizon.test_cutoffs||"[]"):[];
    $("model-warning").textContent=
      "Model validation is retrospective, using current-revised Zillow histories and lagged IRS state tax-return data. "+
      good.length+" of "+tests.length+" horizons beat both simple benchmarks. "+
+     (origins.length<3?"The 5-year model has only "+origins.length+" historical forecast-origin years; treat it as preliminary. ":"")+
      "No causal migration effect is established and error bands are empirical, not guaranteed.";
  }
 }
