@@ -38,7 +38,7 @@ function showTab(tab){
  window.scrollTo({top:0,behavior:"instant"});
  if(tab==="migration")renderMigration();
  if(tab==="housing")renderHousing();
- if(tab==="economy")renderEconomy();
+ if(tab==="economy"){renderEconomy();renderDailyLife();}
  if(tab==="amenities")renderAmenities();
  if(tab==="emerging")renderEmerging();
  if(tab==="compare")renderCompare();
@@ -96,7 +96,7 @@ function setup(){
  });
  renderMethods();renderExplore();renderHousing();renderEmerging();renderCompare();renderMatch();
  ["migration-state","migration-year","migration-county-year","migration-direction"].forEach(id=>$(id).addEventListener("change",renderMigration));
- ["jobs-state","jobs-sector"].forEach(id=>$(id).addEventListener("change",renderEconomy));
+ ["jobs-state","jobs-sector"].forEach(id=>$(id).addEventListener("change",()=>{renderEconomy();renderDailyLife();}));
  ["amenity-state","amenity-sort","amenity-search"].forEach(id=>$(id).addEventListener(id==="amenity-search"?"input":"change",renderAmenities));
 }
 function queryRows(){
@@ -489,7 +489,7 @@ async function loadAmenities(){
  if(!doc){geoAccess=new Map();renderAmenities();return;}
  if(!Array.isArray(doc.places)||doc.places.length<19000)throw Error("Invalid school/outdoor public source coverage");
  geoAccess=new Map(doc.places.map(row=>[row.id,row]));
- renderAmenities();renderMatch();if(selectedTab==="compare")renderCompare();
+ renderAmenities();renderDailyLife();renderMatch();if(selectedTab==="compare")renderCompare();
 }
 function renderAmenities(){
  const node=$("amenity-table");if(!node)return;
@@ -525,6 +525,21 @@ function renderAmenities(){
    '<td class="right '+diff(d?.county_domestic_net_migration_per_1000)+'">'+
     fmt(d?.county_domestic_net_migration_per_1000)+'</td></tr>';
  }).join("")||'<tr><td colspan="9" class="empty">No cities match these geographic filters.</td></tr>';
+}
+function renderDailyLife(){
+ const slot=$("daily-life-table");if(!slot)return;
+ const state=$("jobs-state")?.value||"";
+ const rows=cities.filter(c=>!state||c.s===state)
+   .filter(c=>geoAccess?.get(c.id)?.remote_work_pct!=null)
+   .sort((a,b)=>(geoAccess.get(b.id)?.homes_built_2020_plus_pct??-1)-
+                (geoAccess.get(a.id)?.homes_built_2020_plus_pct??-1)).slice(0,200);
+ slot.innerHTML=rows.length?rows.map(c=>{
+   const d=geoAccess.get(c.id);
+   return '<tr><td><button class="clickcity" data-add="'+c.id+'">'+e(c.n)+', '+e(c.s)+'</button></td>'+
+     ['remote_work_pct','transit_commute_pct','commute_over_45_pct',
+       'homes_built_2020_plus_pct','vacant_for_rent_share_pct'].map(x=>
+         '<td class="right">'+pct(d[x])+'</td>').join("")+'</tr>';
+ }).join(""):'<tr><td colspan="6" class="empty">2024 ACS commuting and housing-stock indicators have not been populated in the latest approved release.</td></tr>';
 }
 async function loadModels(){
  let doc;
