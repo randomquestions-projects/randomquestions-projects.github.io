@@ -223,7 +223,9 @@ function renderMatch(){
 }
 function renderMethods(){
  const blocks=[
- ["What is this public dataset?","The current preview is a curated subset of 63 real U.S. incorporated places selected to span large cities, high-growth markets and relocation candidates. It is NOT a comprehensive national ranking yet. The private research warehouse contains 19,483 places. Full geographic coverage will be published only through a validated, restricted aggregate export."],
+ ["What is this public dataset?",snapshot==="national"?
+    "This published national aggregate contains all 19,483 2025 Census incorporated places. It includes only allowlisted derived indicators, not raw data or research models. Individual measures have varying geographic coverage and missing data remain absent.":
+    "The current preview is a curated set of 63 real U.S. incorporated places. It is NOT a comprehensive national ranking yet. The private research warehouse contains 19,483 places. Full geographic coverage is generated as a validated, restricted aggregate export, awaiting publication permission."],
  ["Population and migration","City population and 2020–2025 growth come from the U.S. Census Bureau Population Estimates Program (2025 vintage). Simple city growth is NOT proof that residents moved in from other areas: births, deaths, and boundaries matter. The private warehouse also contains IRS county tax-return flows and Census county net domestic migration."],
  ["Historical geography","The warehouse contains 2000–2009, 2010–2019, and 2020–2025 Census place histories. Each decade has its own estimate vintage and potentially different boundaries. We do not splice them into a misleading continuous 25-year percentage change."],
  ["Housing values and rents","ZHVI/ZORI are Zillow statistical indexes, not median sale prices, realized investment returns, or rental offers. The 1-, 5-, 10-, and 20-year percentages are observed nominal changes based on source availability, not predictions. Data provided by Zillow Group. <a href='https://www.zillow.com/research/data/' target='_blank' rel='noopener'>Zillow Research</a>."],
