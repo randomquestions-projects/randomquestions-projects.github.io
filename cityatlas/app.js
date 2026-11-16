@@ -7,7 +7,7 @@ const pct=v=>v==null?"—":(v>0?"+":"")+Number(v).toFixed(1)+"%";
 const nice=v=>v==null?"—":Number(v).toFixed(1);
 const e=s=>String(s==null?"":s).replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
 const fields=["id","n","s","lat","lon","pop","g1","g5","inc","ar","age","edu","cost","h","h1","h5","h10","h20","rent","r5","f3","tags"];
-let cities=[],shortlist=[],selectedTab="explore",snapshot="featured",filtered=[],migration=null,migrationScope="featured";
+let cities=[],shortlist=[],selectedTab="explore",snapshot="featured",filtered=[],migration=null,migrationScope="featured",economy=null;
 const eastern=new Set("ME NH VT MA RI CT NY NJ PA DE MD DC VA WV NC SC GA FL".split(" "));
 const southern=new Set("TX OK AR LA MS AL TN KY NC SC GA FL VA WV MD DE DC".split(" "));
 const western=new Set("WA OR CA ID MT WY UT NV AZ NM CO AK HI".split(" "));
@@ -25,6 +25,7 @@ function showTab(tab){
  explore:["Where America<br><em>is going.</em>","Understand how cities are changing, and which places might fit your future.","NATIONAL OVERVIEW"],
  migration:["Follow the<br><em>movement.</em>","Explore net domestic migration and actual origin–destination flows.","MIGRATION FLOWS"],
  housing:["The housing<br><em>story.</em>","Track historical appreciation and affordability using observed housing and Census data.","REAL ESTATE"],
+ economy:["Jobs drive<br><em>the movement.</em>","Understand growing industries, household incomes and regional cost-of-living differences.","JOBS & ECONOMY"],
  emerging:["Spot early<br><em>momentum.</em>","Explore observed changes before building predictive conclusions.","EMERGING MARKETS"],
  compare:["Compare<br><em>your options.</em>","Look beyond headline growth and study the tradeoffs between cities.","CITY COMPARISON"],
  matcher:["Find your next<br><em>home base.</em>","Make your relocation priorities explicit and uncover candidate places.","PERSONAL CITY MATCH"],
@@ -35,6 +36,7 @@ function showTab(tab){
  window.scrollTo({top:0,behavior:"instant"});
  if(tab==="migration")renderMigration();
  if(tab==="housing")renderHousing();
+ if(tab==="economy")renderEconomy();
  if(tab==="emerging")renderEmerging();
  if(tab==="compare")renderCompare();
  if(tab==="matcher")renderMatch();
@@ -65,6 +67,7 @@ async function loadData(){
    "PUBLIC PREVIEW · "+num(cities.length)+" featured, source-backed cities. The private warehouse covers 19,483 places; this published preview is a curated selection, not a complete national ranking.";
  setup();
  loadMigration().catch(err=>{console.warn("Migration source unavailable",err);});
+ loadEconomy().catch(err=>{console.warn("Economy source unavailable",err);});
 }
 function setup(){
  const states=[...new Set(cities.map(c=>c.s))].sort();
@@ -86,6 +89,7 @@ function setup(){
  });
  renderMethods();renderExplore();renderHousing();renderEmerging();renderCompare();renderMatch();
  ["migration-state","migration-year","migration-direction"].forEach(id=>$(id).addEventListener("change",renderMigration));
+ ["jobs-state","jobs-sector"].forEach(id=>$(id).addEventListener("change",renderEconomy));
 }
 function queryRows(){
  const state=$("state").value,term=$("search").value.trim().toLowerCase(),min=Number($("population").value),sort=$("sort").value;
@@ -252,6 +256,61 @@ function renderMigration(){
  '<td class="right '+diff(x.domestic)+'">'+num(x.domestic)+'</td><td class="right">'+num(x.international)+'</td>'+
  '<td class="right '+diff(x.rate)+'">'+nice(x.rate)+'</td></tr>').join(""):
  '<tr><td colspan="6" class="empty">No published counties match this selection in the '+e(migrationScope)+' preview.</td></tr>';
+}
+async function loadEconomy(){
+ let doc=null;
+ try {
+   const res=await fetch("./data/economy.json",{cache:"no-cache"});
+   if(res.ok)doc=await res.json();
+ } catch(err){}
+ if(!doc){
+   economy={workplace_jobs:[],regional_price_parities:[]};
+   renderEconomy(); return;
+ }
+ if(!Array.isArray(doc.workplace_jobs)||!Array.isArray(doc.regional_price_parities))
+   throw new Error("Malformed published economy aggregate data");
+ economy=doc;
+ renderEconomy();
+}
+function renderEconomy(){
+ const state=$("jobs-state");
+ if(!state)return;
+ if(state.options.length<=1){
+  const states=[...new Set(cities.map(c=>c.s))].sort();
+  state.innerHTML='<option value="">All states</option>'+states.map(st=>'<option value="'+e(st)+'">'+e(st)+'</option>').join("");
+ }
+ const st=state.value,sector=$("jobs-sector").value;
+ const records=(economy?.workplace_jobs||[]).filter(x=>(!st||x.state===st)&&x.sector===sector);
+ const keyed=new Map();
+ for(const record of records){
+  const key=record.state+"|"+record.sector;
+  if(!keyed.has(key))keyed.set(key,{state:record.state,sector:record.sector});
+  keyed.get(key)["y"+record.year]=record;
+ }
+ const items=[...keyed.values()];
+ items.sort((a,b)=>(b.y2024?.jobs||0)-(a.y2024?.jobs||0));
+ $("jobs-table").innerHTML=items.length?items.slice(0,130).map(x=>{
+   const first=x.y2015?.jobs,latest=x.y2024?.jobs;
+   const growth=first>0&&latest!=null?100*(latest-first)/first:null;
+   return '<tr><td>'+e(x.state)+'</td><td>'+e(x.sector)+'</td>'+
+   '<td class="right">'+num(first)+'</td><td class="right">'+num(latest)+'</td>'+
+   '<td class="right '+diff(growth)+'">'+pct(growth)+'</td>'+
+   '<td class="right">'+usd(x.y2024?.weekly_wage)+'</td></tr>';
+ }).join(""):'<tr><td colspan="6" class="empty">National industry employment export has not been published yet. City income indicators below use the verified preview and remain available.</td></tr>';
+ const city=cities.filter(c=>(!st||c.s===st)&&c.inc!=null)
+   .sort((a,b)=>b.inc-a.inc).slice(0,200);
+ $("income-table").innerHTML=city.map(c=>'<tr><td><button class="clickcity" data-add="'+c.id+'">'+e(c.n)+', '+e(c.s)+'</button></td>'+
+  '<td class="right">'+num(c.pop)+'</td><td class="right">'+usd(c.inc)+'</td>'+
+  '<td class="right">'+nice(c.age)+'</td><td class="right">'+pct(c.edu)+'</td></tr>').join("")||
+  '<tr><td colspan="5" class="empty">No ACS city records match this state.</td></tr>';
+ const latest=(economy?.regional_price_parities||[]).filter(x=>x.year===2024&&(!st||(x.geography==="state"&&x.geo_id===st)));
+ const usable=latest.length?latest:(economy?.regional_price_parities||[]).filter(x=>(!st||(x.geography==="state"&&x.geo_id===st))).sort((a,b)=>b.year-a.year).slice(0,100);
+ usable.sort((a,b)=>b.index_value-a.index_value);
+ $("rpp-table").innerHTML=usable.length?usable.slice(0,150).map(x=>
+   '<tr><td>'+e(x.geography)+'</td><td>'+e(x.geo_name)+'</td>'+
+   '<td class="right">'+num(x.year)+'</td><td class="right">'+nice(x.index_value)+'</td>'+
+   '<td class="right '+diff(x.index_value-100)+'">'+pct(x.index_value-100)+'</td></tr>').join(""):
+   '<tr><td colspan="5" class="empty">BEA regional price parity import is still under validation. An unavailable index is not a zero-cost region.</td></tr>';
 }
 loadData().catch(err=>{$("scope").textContent="CityAtlas data unavailable: "+err.message;console.error(err);});
 })();
