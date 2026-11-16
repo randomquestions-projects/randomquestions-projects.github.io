@@ -78,6 +78,26 @@ jobs:
                 assert.ok(test?.better_than_both===1,'Cannot publish a forecast failing benchmark gates');
               }
             }
+            if(manifest.history_sha256){
+              const states=Object.keys(manifest.history_sha256);
+              assert.equal(states.length,51,'Incomplete historical city archive');
+              for(const state of states){
+                assert.match(state,/^[A-Z]{2}$/);
+                const file=root+'history/'+state+'.json';
+                assert.ok(fs.existsSync(file),'Missing historical state '+state);
+                const blob=fs.readFileSync(file);
+                assert.equal(crypto.createHash('sha256').update(blob).digest('hex'),
+                             manifest.history_sha256[state],'State history digest mismatch: '+state);
+                const doc=JSON.parse(blob.toString());
+                assert.equal(doc.state,state,'State history label mismatch');
+                assert.ok(doc.places.length>=1,'Empty state annual history');
+                for(const city of doc.places){
+                  assert.match(city.id,/^\d{7}$/);
+                  for(const obs of city.p)assert.ok([2009,2019,2025].includes(obs[0]));
+                }
+              }
+              console.log('Validated annual city histories across 51 states/DC');
+            }
             assert.ok(data.cities.length>=19000,'Nationwide city coverage too low');
             assert.equal(data.fields.length,22,'Schema mismatch');
             assert.ok(migration.counties.length>=250);
