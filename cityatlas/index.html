@@ -132,6 +132,15 @@
         <form id="matcher-form"><label>Preferred region<select name="region"><option value="east">East Coast</option><option value="south">Southern U.S.</option><option value="any">Anywhere in the U.S.</option><option value="west">Western U.S.</option></select></label>
         <label>Natural environment<select name="nature"><option value="mountains">Mountains & hiking</option><option value="coast">Coast & beaches</option><option value="lake">Lakes & waterways</option><option value="forest">Forests & green spaces</option><option value="any">Any</option></select></label>
         <label>Housing affordability<select name="affordability"><option value="medium">Medium</option><option value="lower">Prioritize lower cost</option><option value="flexible">Flexible</option></select></label>
+        <label>Typical city contract-rent ceiling <small>(ACS 2024 median, not current listings)</small>
+          <select name="rent_budget"><option value="any">No ceiling</option><option value="1200">Under $1,200 / month</option><option value="1600">Under $1,600 / month</option><option value="2000">Under $2,000 / month</option><option value="2500">Under $2,500 / month</option><option value="3500">Under $3,500 / month</option></select>
+        </label>
+        <label>Preferred city population
+          <select name="population"><option value="any">Any size</option><option value="small">Under 100K residents</option><option value="medium">100K–500K</option><option value="large">Over 500K</option></select>
+        </label>
+        <label>Landscape priority
+          <select name="nature_priority"><option value="medium">Nice to have</option><option value="high">Very important</option><option value="essential">Essential (filter)</option></select>
+        </label>
         <label>Arts & culture<select name="arts"><option value="yes">Important</option><option value="no">Not essential</option></select></label>
         <label>Climate<select name="climate"><option value="any">No preference</option><option value="warm">Warmer preferred</option><option value="cool">Cooler preferred</option></select></label>
         <label>Public-school proximity<select name="schools"><option value="any">Not a priority</option><option value="some">Some nearby schools</option><option value="many">Many nearby schools</option></select></label>
