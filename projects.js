@@ -29,7 +29,7 @@ window.RQ_PROJECTS = [
     searchKeywords: ['Test', 'ODI', 'T20I', 'batting', 'greatest batter', 'match explorer', 'player comparison'],
     url: 'https://randomquestions-projects.github.io/cricket-greatness-index/',
     theme: 'cricket'
-  }
+  },
   {
     id: 'homekind-apartment-finder',
     title: 'Homekind · Boston Apartment Finder',
