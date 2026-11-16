@@ -314,14 +314,14 @@ function renderEconomy(){
   keyed.get(key)["y"+record.year]=record;
  }
  const items=[...keyed.values()];
- items.sort((a,b)=>(b.y2024?.jobs||0)-(a.y2024?.jobs||0));
+ items.sort((a,b)=>(b.y2025?.jobs||b.y2024?.jobs||0)-(a.y2025?.jobs||a.y2024?.jobs||0));
  $("jobs-table").innerHTML=items.length?items.slice(0,130).map(x=>{
-   const first=x.y2015?.jobs,latest=x.y2024?.jobs;
+   const first=x.y2015?.jobs,latest=(x.y2025||x.y2024)?.jobs;
    const growth=first>0&&latest!=null?100*(latest-first)/first:null;
    return '<tr><td>'+e(x.state)+'</td><td>'+e(x.sector)+'</td>'+
    '<td class="right">'+num(first)+'</td><td class="right">'+num(latest)+'</td>'+
    '<td class="right '+diff(growth)+'">'+pct(growth)+'</td>'+
-   '<td class="right">'+usd(x.y2024?.weekly_wage)+'</td></tr>';
+   '<td class="right">'+usd((x.y2025||x.y2024)?.weekly_wage)+'</td></tr>';
  }).join(""):'<tr><td colspan="6" class="empty">National industry employment export has not been published yet. City income indicators below use the verified preview and remain available.</td></tr>';
  const city=cities.filter(c=>(!st||c.s===st)&&c.inc!=null)
    .sort((a,b)=>b.inc-a.inc).slice(0,200);
