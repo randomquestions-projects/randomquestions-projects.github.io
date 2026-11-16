@@ -93,7 +93,7 @@ function setup(){
   if(ev.key==="Enter"&&ev.target.matches("[data-add]"))selectCity(ev.target.dataset.add);
  });
  renderMethods();renderExplore();renderHousing();renderEmerging();renderCompare();renderMatch();
- ["migration-state","migration-year","migration-direction"].forEach(id=>$(id).addEventListener("change",renderMigration));
+ ["migration-state","migration-year","migration-county-year","migration-direction"].forEach(id=>$(id).addEventListener("change",renderMigration));
  ["jobs-state","jobs-sector"].forEach(id=>$(id).addEventListener("change",renderEconomy));
  ["amenity-state","amenity-sort","amenity-search"].forEach(id=>$(id).addEventListener(id==="amenity-search"?"input":"change",renderAmenities));
 }
@@ -268,9 +268,13 @@ async function loadMigration(){
   const stream=new Blob([raw]).stream().pipeThrough(new DecompressionStream("gzip"));
   data=JSON.parse(await new Response(stream).text());migrationScope="featured";
  }
- const counties=(data.counties||[]).map(x=>Array.isArray(x)?{id:x[0],name:x[1],state:x[2],pop:x[3],domestic:x[4],international:x[5],rate:x[6]}:x);
+ const counties=(data.counties||[]).map(x=>Array.isArray(x)?{id:x[0],name:x[1],state:x[2],pop:x[3],domestic:x[4],international:x[5],rate:x[6],year:2025}:x);
  const flows=(data.state_flows||[]).map(x=>Array.isArray(x)?{orig:x[0],dest:x[1],returns:x[2],persons:x[3],year:x[4]}:x);
  migration={counties,flows};
+ const irsYears=[...new Set(flows.map(x=>x.year))].sort((a,b)=>b-a);
+ const censusYears=[...new Set(counties.map(x=>x.year||2025))].sort((a,b)=>b-a);
+ $("migration-year").innerHTML=irsYears.map(y=>'<option value="'+y+'">'+y+' IRS tax filing year</option>').join("");
+ $("migration-county-year").innerHTML=censusYears.map(y=>'<option value="'+y+'">'+y+' Census county migration</option>').join("");
  const states=[...new Set([...counties.map(x=>x.state),...flows.map(x=>x.orig),...flows.map(x=>x.dest)])].filter(Boolean).sort();
  $("migration-state").innerHTML='<option value="">All states</option>'+states.map(x=>'<option value="'+e(x)+'">'+e(x)+'</option>').join("");
  renderMigration();
@@ -285,7 +289,8 @@ function renderMigration(){
  '<tr><td>'+e(x.orig)+'</td><td>'+e(x.dest)+'</td><td class="right">'+num(x.returns)+'</td>'+
  '<td class="right">'+num(x.persons)+'</td><td class="right">'+e(x.year)+'</td></tr>').join(""):
  '<tr><td colspan="5" class="empty">No released flow records for this selection in the '+e(migrationScope)+' public snapshot.</td></tr>';
- const count=migration.counties.filter(x=>!st||x.state===st)
+ const countyYear=Number($("migration-county-year").value||"2025");
+ const count=migration.counties.filter(x=>(x.year||2025)===countyYear&&(!st||x.state===st))
      .sort((a,b)=>dir==="outbound"?a.rate-b.rate:b.rate-a.rate);
  $("county-count").textContent=num(count.length)+" counties";
  $("county-table").innerHTML=count.length?count.slice(0,180).map(x=>
