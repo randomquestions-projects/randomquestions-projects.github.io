@@ -8,6 +8,7 @@ const nice=v=>v==null?"—":Number(v).toFixed(1);
 const e=s=>String(s==null?"":s).replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
 const fields=["id","n","s","lat","lon","pop","g1","g5","inc","ar","age","edu","cost","h","h1","h5","h10","h20","rent","r5","f3","tags"];
 let cities=[],shortlist=[],selectedTab="explore",snapshot="featured",filtered=[],migration=null,migrationScope="featured",economy=null,stateBorders=null,geoAccess=null,models=null;
+const annualHistoryCache=new Map();
 const eastern=new Set("ME NH VT MA RI CT NY NJ PA DE MD DC VA WV NC SC GA FL".split(" "));
 const southern=new Set("TX OK AR LA MS AL TN KY NC SC GA FL VA WV MD DE DC".split(" "));
 const western=new Set("WA OR CA ID MT WY UT NV AZ NM CO AK HI".split(" "));
@@ -84,6 +85,7 @@ function setup(){
  ["housing-sort","housing-search"].forEach(id=>$(id).addEventListener(id==="housing-search"?"input":"change",renderHousing));
  $("add-city").addEventListener("click",()=>selectCity($("city-picker").value));
  $("clear-cities").addEventListener("click",()=>{shortlist=[];renderCompare();});
+ $("history-city").addEventListener("change",()=>renderCityHistory().catch(err=>console.warn(err)));
  $("matcher-form").addEventListener("submit",ev=>{ev.preventDefault();renderMatch();});
  document.body.addEventListener("click",ev=>{
   const add=ev.target.closest("[data-add]");if(add){selectCity(add.dataset.add);return;}
@@ -178,7 +180,12 @@ function renderEmerging(){
 function renderCompare(){
  const chips=$("chips"),pane=$("compare-table");
  chips.innerHTML=shortlist.map(id=>{const c=bykey(id);return c?'<span class="chip">'+e(c.n)+', '+e(c.s)+' <button data-remove="'+id+'" aria-label="Remove '+e(c.n)+'">×</button></span>':"";}).join("");
- if(!shortlist.length){pane.innerHTML=empty("Choose a city above, or select + Compare anywhere in the app. Add up to four cities.");return;}
+ if(!shortlist.length){
+  pane.innerHTML=empty("Choose a city above, or select + Compare anywhere in the app. Add up to four cities.");
+  $("history-city").replaceChildren();
+  $("history-body").innerHTML=empty("Add a city to view 2000–2025 population and Zillow histories.");
+  return;
+ }
  const shown=shortlist.map(bykey).filter(Boolean);
  const specs=[["2025 population","pop",num],["Population growth 1Y","g1",pct],["Population growth 5Y","g5",pct],
  ["Typical home-value index*","h",usd],["Home appreciation 1Y","h1",pct],["Home appreciation 5Y","h5",pct],
@@ -189,6 +196,84 @@ function renderCompare(){
  pane.innerHTML='<div class="compare-table"><table><thead><tr><th>Measure</th>'+shown.map(c=>'<th>'+e(c.n)+', '+e(c.s)+'</th>').join("")+'</tr></thead><tbody>'+
  specs.map(([label,key,fmt])=>'<tr><td>'+e(label)+'</td>'+shown.map(c=>'<td>'+fmt(c[key])+'</td>').join("")+'</tr>').join("")+'</tbody></table></div>'+
  '<div class="fineprint">* Zillow model-based city indexes, not sales or actual listed rentals. Source: Census PEP 2025, ACS 2024 5-year, Zillow Research. Different source periods are not directly interchangeable.</div>';
+ const selector=$("history-city"),prior=selector.value;
+ selector.innerHTML=shown.map(c=>'<option value="'+e(c.id)+'">'+e(c.n)+', '+e(c.s)+'</option>').join("");
+ selector.value=shown.some(c=>c.id===prior)?prior:shown[0].id;
+ renderCityHistory().catch(err=>{console.warn(err);$("history-body").innerHTML=empty("Annual-history files are currently unavailable.");});
+}
+async function stateHistory(state){
+ if(!/^[A-Z]{2}$/.test(state))throw Error("Invalid state code");
+ if(annualHistoryCache.has(state))return annualHistoryCache.get(state);
+ const promise=(async()=>{
+   const resp=await fetch("./data/history/"+state+".json",{cache:"no-cache"});
+   if(!resp.ok)throw Error("State historical data has not been published");
+   const doc=await resp.json();
+   if(doc.state!==state||!Array.isArray(doc.places))throw Error("Historic city file mismatch");
+   return new Map(doc.places.map(x=>[x.id,x]));
+ })();
+ annualHistoryCache.set(state,promise);
+ return promise;
+}
+function historyChart(series,type,range){
+ const years=series.map(x=>Number(x[0])),values=series.map(x=>Number(x[1]));
+ if(years.length<2)return empty("Insufficient historical records.");
+ const minYear=range?.[0]??Math.min(...years),maxYear=range?.[1]??Math.max(...years);
+ const minY=Math.min(...values),maxY=Math.max(...values),span=Math.max(1,maxY-minY);
+ const path=series.map((x,i)=>{
+   const px=46+((x[0]-minYear)/Math.max(1,maxYear-minYear))*680;
+   const py=163-((x[1]-minY)/span)*131;
+   return (i?"L":"M")+px.toFixed(2)+","+py.toFixed(2);
+ }).join(" ");
+ return '<svg class="city-history-chart" viewBox="0 0 770 200" role="img" aria-label="'+e(type)+' annual history from '+minYear+' to '+maxYear+'">'+
+ '<line x1="46" y1="165" x2="730" y2="165" stroke="#cbded1"/>'+
+ '<line x1="46" y1="30" x2="46" y2="165" stroke="#cbded1"/>'+
+ '<path d="'+e(path)+'" fill="none" stroke="#12846b" stroke-width="3" stroke-linecap="round"/>'+
+ '<text x="46" y="187" font-size="11" fill="#667d76">'+minYear+'</text>'+
+ '<text x="709" y="187" font-size="11" fill="#667d76">'+maxYear+'</text>'+
+ '<text x="46" y="21" font-size="11" fill="#667d76">'+num(maxY)+'</text>'+
+ '<text x="46" y="160" font-size="11" fill="#667d76">'+num(minY)+'</text>'+
+ '</svg>';
+}
+async function renderCityHistory(){
+ const id=$("history-city")?.value;
+ const body=$("history-body");if(!body||!id)return;
+ const c=bykey(id);if(!c)return;
+ body.innerHTML=empty("Loading approved city history…");
+ try{
+   const byGeo=await stateHistory(c.s);
+   if($("history-city")?.value!==id)return; // ignore stale responses after selection
+   const d=byGeo.get(id);
+   if(!d)throw Error("Missing source-backed place history");
+   let html='<div class="history-graphs">';
+   const pop=d.p||[];
+   const vintages=[2009,2019,2025];
+   html+='<article class="history-plot"><h3>Population · three separate Census estimate vintages</h3>';
+   for(const vintage of vintages){
+     const rows=pop.filter(v=>v[0]===vintage).map(v=>[v[1],v[2]]);
+     if(rows.length>1){
+       html+='<h4>'+vintage+' estimate vintage ('+rows.length+' annual readings)</h4>'+
+             historyChart(rows,"Census "+vintage+" population");
+     }
+   }
+   html+='</article>';
+   for(const [key,name] of [["zh","Home value index · Zillow ZHVI"],["zr","Rental index · Zillow ZORI"]]){
+     const values=d[key]||[];
+     html+='<article class="history-plot"><h3>'+e(name)+'</h3>'+
+       (values.length>1?historyChart(values,name):empty("No matching annual Zillow index history."))+
+       '<p class="sample-note">Annual January values. Indexes are not transactions; absent years are never interpolated.</p></article>';
+   }
+   const model=(models?.conditionally_published_forecasts||[]).filter(m=>m.id===id);
+   if(model.length){
+     html+='<article class="history-plot"><h3>Conditionally validated housing outlook</h3>'+
+       model.map(x=>'<p class="sample-note">'+e(x.horizon)+'-year predicted index change: '+
+          pct(x.predicted_change_pct)+' · 90th-percentile absolute error '+nice(x.error_bound_pp)+' percentage points</p>').join("")+
+       '<p class="sample-note">Not investment advice. Based on current-revised historical data, not a complete point-in-time archive.</p></article>';
+   }
+   html+='</div><p class="fineprint">Census 2009, 2019 and 2025 vintages are deliberately shown separately, because geographic definitions and revisions differ. Zillow values are source-model indexes with variable coverage.</p>';
+   body.innerHTML=html;
+ }catch(err){
+   body.innerHTML=empty("Annual city histories are not yet published for this state. The approved national summary remains available.");
+ }
 }
 function rankMatch(c,options){
  let score=0,why=[];
