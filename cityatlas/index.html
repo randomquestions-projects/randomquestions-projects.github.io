@@ -5,7 +5,7 @@
 <meta name="color-scheme" content="light"><meta name="description" content="CityAtlas explores the changing geography of America: population, migration, real estate, affordability, and personalized city matching.">
 <title>CityAtlas | Where America Is Going</title>
 <link rel="icon" href="../favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css">
-<script src="./preview-data.js" defer></script><script src="./app.js" defer></script>
+<script src="./preview-data.js" defer></script><script src="./migration-preview.js" defer></script><script src="./app.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -14,7 +14,8 @@
   <a class="identity" href="../"><span class="mark">◈</span><span><b>cityatlas</b><small>by random questions</small></span></a>
   <p class="nav-label">EXPLORE THE DATA</p>
   <nav id="nav" aria-label="CityAtlas navigation">
-    <button data-tab="explore" class="active"><span>◉</span> Migration & growth</button>
+    <button data-tab="explore" class="active"><span>◉</span> Population & growth</button>
+    <button data-tab="migration"><span>↗</span> Migration flows</button>
     <button data-tab="housing"><span>▦</span> Real estate</button>
     <button data-tab="emerging"><span>✧</span> Emerging markets</button>
     <button data-tab="compare"><span>⇄</span> Compare cities</button>
@@ -48,6 +49,18 @@
         <section class="panel leaders"><div class="panel-head"><div><span class="panel-label">GROWTH LEADERS</span><h2>Fast-growing cities</h2><p>Five-year change · your active filters</p></div></div><div id="leaders" class="leader-list"></div></section>
       </div>
       <section class="panel table-panel"><div class="panel-head"><div><span class="panel-label">RESEARCH EXPLORER</span><h2>City rankings</h2><p>Sortable population and housing signals · select a city to compare</p></div><span class="pill" id="row-count">—</span></div><div class="table-scroller"><table><thead><tr><th>City</th><th class="right">Population</th><th class="right">1Y pop.</th><th class="right">5Y pop.</th><th class="right">5Y housing</th><th class="right">Home value*</th><th></th></tr></thead><tbody id="rankings"></tbody></table></div></section>
+    </section>
+    <section id="migration" class="tab" hidden>
+      <div class="section-intro"><h2>Where people<br><em>are moving.</em></h2><p>County net domestic migration and interstate tax-return flows reveal a different story than simple city population growth.</p></div>
+      <div class="three-info"><article><span>2025 CENSUS</span><h3>Net migration</h3><p>Estimated inflows minus outflows at the county level, expressed per 1,000 residents.</p></article><article><span>IRS FLOWS</span><h3>Origins and destinations</h3><p>Published tax-return address changes reveal which states are exchanging households.</p></article><article><span>DIFFERENT MEASURES</span><h3>Not interchangeable</h3><p>IRS tax returns omit some households and Census net migration doesn't identify origins.</p></article></div>
+      <div class="toolbar"><select id="migration-state" aria-label="State for migration"><option value="">All states</option></select>
+      <select id="migration-year" aria-label="IRS migration year"><option value="2023">2023 IRS tax filing year</option><option value="2019">2019 IRS tax filing year</option></select>
+      <select id="migration-direction" aria-label="Migration direction"><option value="inbound">Moving into state</option><option value="outbound">Moving out of state</option></select></div>
+      <div class="panel table-panel"><div class="panel-head"><div><span class="panel-label">IRS COUNTY-PAIR AGGREGATES</span><h2>Interstate migration routes</h2><p>Released IRS returns with address changes, aggregated to state pairs</p></div><span class="pill" id="flow-count">—</span></div>
+      <div class="table-scroller"><table><thead><tr><th>Origin</th><th>Destination</th><th class="right">Tax returns moving</th><th class="right">Individuals on returns</th><th class="right">Year</th></tr></thead><tbody id="flow-table"></tbody></table></div></div>
+      <div class="panel table-panel"><div class="panel-head"><div><span class="panel-label">CENSUS PEP 2025</span><h2>County net domestic migration</h2><p>Positive values indicate estimated net inbound domestic migration</p></div><span class="pill" id="county-count">—</span></div>
+      <div class="table-scroller"><table><thead><tr><th>County</th><th>State</th><th class="right">Population</th><th class="right">Net domestic</th><th class="right">Net international</th><th class="right">Domestic per 1,000</th></tr></thead><tbody id="county-table"></tbody></table></div></div>
+      <div class="notice"><b>About the geographic scope</b><p>Flow records are estimated or suppressed according to their source rules. IRS returns are not a person-level census of movers. County migration is different from a city's net migration. Rankings reflect the available published geographic coverage.</p></div>
     </section>
     <section id="housing" class="tab" hidden>
       <div class="section-intro"><h2>Real estate & affordability</h2><p>Separate observed housing appreciation from demographic growth. Compare long-term Zillow indexes and Census income measures.</p></div>
