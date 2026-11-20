@@ -20,7 +20,12 @@
   const fullName = (s) => s || '—';
 
   function populateYears() {
-    for (let year = 2026; year >= 1960; year--) {
+    $('year-filter').replaceChildren();
+    const availableYears = state.league === 'NFL'
+      ? Array.from({length:27},(_,i)=>2026-i)
+      : [2020];
+    if (!availableYears.includes(state.year)) state.year = 2020;
+    for (const year of availableYears) {
       const opt = document.createElement('option');
       opt.value = String(year);
       opt.textContent = String(year);
@@ -166,7 +171,7 @@
     }
     const sourceNote=document.querySelector('.profile-source > span:nth-child(2)');
     if(sourceNote)sourceNote.textContent = career ?
-      ('Career scoring ' + (p.rating ? p.rating.maturity : 'pending')+
+      ('Career scoring ' + (p.rating ? (p.rating.maturity === 'final' ? 'established-career snapshot' : 'provisional') : 'pending')+
        ' · Source: nflverse · Model '+(p.rating ? p.rating.model_version : 'not assigned')) :
       'Draft selection verified · career measurements pending';
 
@@ -219,6 +224,7 @@
     state.sort = 'pick';
     $('player-search').value = '';
     $('sort-filter').value = 'pick';
+    populateYears();
     populateRounds();
     loadDraft();
     if (focus) $('tab-' + league.toLowerCase()).focus();
