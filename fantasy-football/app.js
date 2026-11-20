@@ -1,5 +1,7 @@
 "use strict";
-const SITES=["ESPN","Sleeper","CBS","NFL","RTSports","Fantrax","Yahoo"];
+const SITES=["ESPN","Sleeper","CBS","RTSports","Fantrax","Yahoo"];
+const DISPLAY_SITES=["ESPN","Sleeper","CBS","FantasyPros","RTSports","Fantrax","Yahoo"];
+const platformADP=(p,site)=>site==="FantasyPros"?p.fp_consensus:p.adp?.[site];
 const SITE_SHORT={"RTSports":"RTS","Fantrax":"FAN"};
 const YEARS=[2026,2025,2024,2023,2022,2021,2020,2019,2018,2017,2016,2015];
 const store=new Map();
@@ -20,8 +22,7 @@ const seasonStatus=d=>d?.season_status==="IN_PROGRESS"?"SEASON TO DATE":"FINAL S
 const validData=d=>d&&d.year===state.year&&Array.isArray(d.players)&&d.players.length>100;
 function rankCols(){
   const items=[{k:"name",h:"Player"},{k:"avg_adp",h:"Avg. ADP"}];
-  for(const k of SITES)items.push({k:"adp_"+k,h:SITE_SHORT[k]||k});
-  items.push({k:"fp_consensus",h:"FP Composite"});
+  for(const k of DISPLAY_SITES)items.push({k:"adp_"+k,h:SITE_SHORT[k]||k});
   items.push({k:"std_rank",h:"Actual STD"},{k:"ppr_rank",h:"Actual PPR"},
              {k:"delta_std",h:"Δ STD"},{k:"delta_ppr",h:"Δ PPR"});
   return items;
@@ -29,8 +30,7 @@ function rankCols(){
 function sortvalue(p,k){
   if(k==="name")return p.name.toLowerCase();
   if(k==="avg_adp")return p.avg_adp;
-  if(k==="fp_consensus")return p.fp_consensus;
-  if(k.startsWith("adp_"))return p.adp?.[k.slice(4)];
+  if(k.startsWith("adp_"))return platformADP(p,k.slice(4));
   if(k.endsWith("_rank"))return outcome(p,k.startsWith("ppr")?"ppr":"std",state.gap);
   if(k.startsWith("delta_"))return gap(p,k.endsWith("ppr")?"ppr":"std",state.gap);
   return null;
@@ -58,7 +58,7 @@ function renderStatus(d){
   const best=d.players.filter(p=>p.stats&&p.avg_adp<=180).sort((a,b)=>(gap(b,"ppr","value")??-99999)-(gap(a,"ppr","value")??-99999))[0];
   const stats=[["Players with ADP",val(total),"Season's archived preseason board"],
                ["Actuals matched",val(matched),total?Math.round(matched/total*100)+"% validated join coverage":"Not available"],
-               ["ADP platforms",val(SITES.filter(s=>d.players.some(p=>isNum(p.adp?.[s]))).length),"Missing sites are not imputed"],
+               ["ADP sources + benchmark",val(DISPLAY_SITES.filter(s=>d.players.some(p=>isNum(platformADP(p,s)))).length),"FantasyPros consensus is a benchmark"],
                ["Top draft surprise",best?best.name:"—",best?"+"+val(gap(best,"ppr","value"))+" value-rank improvement":"Awaiting actual outcomes"]];
   $("stat-row").innerHTML=stats.map(([label,n,note])=>'<div class="stat"><div class="stat-label">'+esc(label)+'</div><div class="stat-number" title="'+esc(n)+'">'+esc(n)+'</div><div class="stat-note">'+esc(note)+'</div></div>').join("");
 }
@@ -80,8 +80,7 @@ function renderBoard(d){
     const dlt=gap(p,colorMetric,state.gap),cls=colored(dlt);
     const name='<td><div class="player-cell"><span class="position-icon '+esc(p.pos.toLowerCase())+'">'+esc(p.pos)+'</span><div class="player-names"><span class="player-name">'+esc(p.name)+'</span><span class="player-meta">'+esc(p.team||"Team unknown")+' · '+esc(p.pos)+'</span></div></div></td>';
     const cells=['<td class="adp-cell rank-primary">'+val(p.avg_adp)+'</td>',
-      ...SITES.map(s=>'<td class="'+(p.adp?.[s]==null?"empty-cell":"adp-cell")+'">'+val(p.adp?.[s])+'</td>'),
-      '<td title="FantasyPros archived composite, not an additional independent ADP source" class="'+(p.fp_consensus==null?"empty-cell":"adp-cell")+'">'+val(p.fp_consensus)+'</td>',
+      ...DISPLAY_SITES.map(s=>'<td title="'+(s==="FantasyPros"?"FantasyPros consensus benchmark — excluded from average ADP":esc(s)+" preseason ADP")+'" class="'+(platformADP(p,s)==null?"empty-cell":"adp-cell")+'">'+val(platformADP(p,s))+'</td>'),
       '<td class="rank-primary">'+(p.stats?"#"+val(outcome(p,"std",state.gap)):"—")+'</td>',
       '<td class="rank-primary">'+(p.stats?"#"+val(outcome(p,"ppr",state.gap)):"—")+'</td>',
       ...["std","ppr"].map(m=>{
@@ -95,8 +94,8 @@ function renderBoard(d){
   $("board-summary").textContent="Sorted by "+(columns.find(c=>c.k===state.sort)?.h||"ADP")+" "+(state.asc?"↑":"↓");
 }
 function compareSites(d,m,basis){
-  const candidates=SITES.filter(s=>d.players.filter(p=>p.stats&&p.avg_adp<=150&&isNum(p.adp?.[s])).length>=30);
-  const cohort=d.players.filter(p=>p.stats&&p.avg_adp<=150&&candidates.every(s=>isNum(p.adp?.[s])));
+  const candidates=DISPLAY_SITES.filter(s=>d.players.filter(p=>p.stats&&p.avg_adp<=150&&isNum(platformADP(p,s))).length>=30);
+  const cohort=d.players.filter(p=>p.stats&&p.avg_adp<=150&&candidates.every(s=>isNum(platformADP(p,s))));
   if(cohort.length<20||candidates.length<2)return {sites:[],cohort,reason:"Not enough overlapping preseason observations to rank sites fairly."};
   function summarize(s,adpFor){
     const diffs=cohort.map(p=>adpFor(p)-outcome(p,m,basis));
@@ -104,7 +103,7 @@ function compareSites(d,m,basis){
        within:100*diffs.filter(x=>Math.abs(x)<=12).length/diffs.length,
        bias:diffs.reduce((a,b)=>a+b,0)/diffs.length,n:diffs.length};
   }
-  const sites=candidates.map(s=>summarize(s,p=>p.adp[s]))
+  const sites=candidates.map(s=>summarize(s,p=>platformADP(p,s)))
                         .concat([summarize("Consensus",p=>p.avg_adp)])
                         .sort((a,b)=>a.mae-b.mae);
   return {sites,cohort,reason:null};
@@ -152,7 +151,7 @@ async function ensureHistorical(){
     for(const y of seasons){
       const d=store.get(y);
       const {sites,cohort}=compareSites(d,"ppr","value");
-      const annual=sites.filter(r=>SITES.includes(r.site));
+      const annual=sites.filter(r=>DISPLAY_SITES.includes(r.site));
       if(annual.length<2||cohort.length<25)continue;
       useful++;
       const peer=annual.reduce((s,r)=>s+r.mae,0)/annual.length;
@@ -195,12 +194,12 @@ function renderSources(d){
   const src=d.source||{},o=d.outcome_source||{};
   const meta=d.coverage||{};
   const adplink=cleanLink(src.url),actual=cleanLink(o.url);
-  const coverageCounts=SITES.map(site=>site+": "+d.players.filter(p=>isNum(p.adp?.[site])).length).join(" · ");
-  const snapshotNote=d.year===2026?'2026 sources: ESPN, Sleeper, CBS, RTSports and Fantrax frozen in the August 1 archive; Yahoo from the September 8 preseason board with July 29 fallback. NFL.com unavailable. 2026 records and player-site coverage vary by provider.':'Historical snapshots and source availability vary by season.';
+  const coverageCounts=DISPLAY_SITES.map(site=>site+": "+d.players.filter(p=>isNum(platformADP(p,site))).length).join(" · ");
+  const snapshotNote=d.year===2026?'2026 sources: ESPN, Sleeper, CBS, RTSports and Fantrax frozen in the August 1 archive; Yahoo from the September 8 preseason board with July 29 fallback. FantasyPros consensus is the archived composite benchmark. NFL.com is excluded from the visible comparison. 2026 records and player-site coverage vary by provider.':'Historical snapshots and source availability vary by season.';
   $("sources").innerHTML='<div class="source-title">DATA & METHODOLOGY · VERIFIABLE SOURCES</div>'+
     '<p><strong>ADP coverage:</strong> '+esc(coverageCounts)+' ('+val(d.players.length)+' unique archived players). '+esc(snapshotNote)+'</p>'+
     '<p><strong>Preseason ADP:</strong> '+esc(src.provider||"Archived multi-source ADP")+
-    ' · <a href="'+esc(adplink)+'" target="_blank" rel="noopener noreferrer">Archive provenance ↗</a>. Only available platform observations contribute to the arithmetic mean; no site values are invented. FP Composite is the archived FantasyPros aggregate shown separately, never double-counted as a platform in the average. Historical snapshot dates before 2025 have not all been independently verified. Team labels are reconciled against season stats where available.</p>'+
+    ' · <a href="'+esc(adplink)+'" target="_blank" rel="noopener noreferrer">Archive provenance ↗</a>. Only available platform observations contribute to the arithmetic mean; no site values are invented. FantasyPros appears as an archived consensus benchmark in NFL.com’s former column, and is never double-counted in average ADP. Six independent platforms determine the average. Historical snapshot dates before 2025 have not all been independently verified. Team labels are reconciled against season stats where available.</p>'+
     '<p><strong>Actual finishes:</strong> <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noopener noreferrer">nflverse NFL player data ↗</a>'+
     ' · '+(actual!=="#"?'<a href="'+esc(actual)+'" target="_blank" rel="noopener noreferrer">Season-specific regular-season CSV ↗</a> · ':"")+
     'Regular-season standard (0 PPR) and full PPR total points, NFL fantasy scoring. '+esc(d.season_status==="IN_PROGRESS"?"2026 actuals reflect the current available season-to-date data.":"Historical seasons use final outcomes.")+

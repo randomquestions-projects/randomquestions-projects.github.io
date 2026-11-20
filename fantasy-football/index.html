@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#f6f8fb">
-<meta name="description" content="Fantasy Football Expectations: compare historical preseason ADP across ESPN, Sleeper, Yahoo, CBS, NFL, RTSports and Fantrax against actual standard and PPR finishes, 2015–2026.">
+<meta name="description" content="Fantasy Football Expectations: compare historical preseason ADP across ESPN, Sleeper, Yahoo, CBS, RTSports, Fantrax and FantasyPros consensus against actual standard and PPR finishes, 2015–2026.">
 <meta property="og:title" content="Fantasy Football | Expectations vs. Reality">
 <meta property="og:description" content="Who beat draft expectations? Compare 2020–2026 ADP, actual fantasy rankings, platform accuracy and the biggest steals and busts.">
 <link rel="icon" type="image/svg+xml" href="./favicon.svg">
@@ -25,7 +25,7 @@
         <div class="eyebrow"><span class="live-dot"></span> FANTASY FOOTBALL INTELLIGENCE <span class="eyebrow-slash">/</span> 2015—2026</div>
         <h1>Expectations <span>vs. reality.</span></h1>
         <p class="hero-sub">Twelve draft seasons. Multiple platforms. One question: <strong>who actually delivered on the hype?</strong> Follow every pick from preseason draft price to real fantasy production.</p>
-        <div class="hero-meta"><span class="hero-pill">12 historical seasons</span><span class="hero-pill">7 potential ADP sources + FP composite</span><span class="hero-pill">Standard + PPR</span></div>
+        <div class="hero-meta"><span class="hero-pill">12 historical seasons</span><span class="hero-pill">6 ADP platforms + FantasyPros benchmark</span><span class="hero-pill">Standard + PPR</span></div>
       </div>
       <div class="hero-art" aria-hidden="true">
         <div class="art-glow"></div>
@@ -73,10 +73,10 @@
           <div class="toolbar compact-toolbar"><label class="control"><span>OUTCOME MEASURE</span><select id="accuracy-scoring"><option value="ppr">PPR finish</option><option value="std">Standard finish</option></select></label><label class="control"><span>RANK BASIS</span><select id="accuracy-basis"><option value="value">Roster-adjusted value rank</option><option value="raw">All-player total points rank</option></select></label></div>
           <div id="accuracy-callout" class="insight-callout"></div>
           <div class="accuracy-layout"><div class="accuracy-table-wrap"><table class="accuracy-table"><thead><tr><th>Site</th><th>Mean absolute error <small>↓ better</small></th><th>Within 12 picks <small>↑ better</small></th><th>Avg. signed gap</th><th>Matched players</th></tr></thead><tbody id="accuracy-body"></tbody></table></div><div class="accuracy-panel"><h4>How to read this</h4><p id="accuracy-explanation"></p><div class="method-rule"></div><div class="sub-kicker">COMMON COHORT</div><div class="large-number" id="common-count">—</div><p class="small-muted">Players with preseason values at every eligible source, an actual result, and average ADP within the first 150 picks.</p></div></div>
-          <div class="caution-note"><span>ⓘ</span> A site’s ADP captures <em>draft behavior</em>, not a fantasy-points prediction. These are descriptive comparisons, not validated forecast-calibration scores. Site coverage and league scoring settings vary.</div>
+          <div class="caution-note"><span>ⓘ</span> A site’s ADP captures <em>draft behavior</em>, not a fantasy-points prediction. FantasyPros is a composite benchmark, not an independent platform. These are descriptive comparisons, not validated forecast-calibration scores. Site coverage and league scoring settings vary.</div>
           <div class="history-section"><div class="history-heading"><div class="section-overline">2015–2025 · HISTORICAL TRACK RECORD</div><h3>Who is consistently closest?</h3><p id="history-summary">Comparing platform performance across completed seasons…</p></div>
             <div class="accuracy-table-wrap"><table class="accuracy-table"><thead><tr><th>Platform</th><th>Years evaluated</th><th>Avg. error vs same-year peers <small>negative is better</small></th><th>Mean error</th><th>Years ranked #1</th></tr></thead><tbody id="historical-body"></tbody></table></div>
-            <div class="history-footnote">Annual comparisons use the same player cohort across available platforms. Multi-year scores average each platform’s within-year difference against its eligible peers, not raw errors across incomparable historical cohorts. Incomplete 2026 is excluded.</div>
+            <div class="history-footnote">Annual comparisons use the same player cohort across available platforms and FantasyPros, which is an aggregate benchmark. Multi-year scores average each platform’s within-year difference against its eligible peers, not raw errors across incomparable historical cohorts. Incomplete 2026 is excluded.</div>
           </div>
         </section>
         <section class="tab-panel" id="panel-insights" role="tabpanel" aria-labelledby="tab-insights" hidden>
