@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NBA methodology — Draft Reports</title>
+<meta name="description" content="NBA Draft Reports methodology, data coverage, source limitations, and career grading.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css">
+<style>main{max-width:880px;margin:0 auto;padding:68px 24px 120px}.research{line-height:1.75;color:#343c3b}.research h1{font-size:clamp(2rem,5vw,3.5rem);line-height:1.12;margin:0 0 1rem}.research h2{margin:2.5rem 0 .8rem;font-size:1.45rem}.research h3{margin:1.2rem 0 .5rem;font-size:1.06rem}.research p{margin:0 0 1rem}.research li{margin:.4rem 0}.research a{text-decoration:underline;text-underline-offset:3px}.research code{background:#f0f3f1;padding:.1rem .35rem;border-radius:3px}.research .lead{font-size:1.14rem}.smallmeta{letter-spacing:.1em;text-transform:uppercase;font-weight:600;font-size:.75rem;color:#63716c}.research table{border-collapse:collapse;width:100%;font-size:.94rem}.research th,.research td{padding:.6rem;text-align:left;border-bottom:1px solid #dbe0dc}.research ul{padding-left:1.3rem}</style>
+</head><body><div class="site-wrap"><header class="site-header"><a class="hub-link" href="../"><span class="rq-mark">r<span>q</span><i>.</i></span><span>random questions</span></a><a class="back-link" href="./">Back to Draft Reports ↗</a></header></div>
+<main class="research"><div class="smallmeta">DRAFT REPORTS / RESEARCH / NOV 2026</div>
+<h1>How we evaluate NBA draft picks.</h1>
+<p class="lead">Two different questions need two different scores: how good was the player's NBA career, and how much value did the team receive relative to the overall pick?</p>
+<h2>Historical coverage</h2>
+<p>The NBA dataset contains <strong>1,602 draft selections from 2000 through 2026</strong>, both rounds, including players who never appeared in an NBA regular-season game. Career totals and advanced impact data come from a 2000–2025 NBA draft history aggregation incorporating NBA Stats and Basketball-Reference-derived records. Career information is currently complete through the <strong>2025–26 NBA season</strong>, with 2026–27 not yet finalized.</p>
+<p>Original draft team refers to the selecting team; a draft-night trade may transfer player rights to another franchise. Career statistics include points, rebounds, assists, games, minutes, steals, blocks, per-game averages, career Win Shares, Win Shares per 48, VORP and BPM. Missing advanced impact statistics are not evidence of a zero-value career.</p>
+<h2>Career quality (0–100)</h2>
+<p>Quality is independent of draft slot. Each statistical metric is compared against the 2000–2017 drafted-player reference cohort, including players with no NBA appearance. The current descriptive model applies:</p>
+<table><thead><tr><th>Component</th><th>Weight</th></tr></thead><tbody>
+<tr><td>Career Win Shares (WS), percentile</td><td>35%</td></tr>
+<tr><td>Career Value Over Replacement Player (VORP), percentile</td><td>24%</td></tr>
+<tr><td>Career minutes, log-scaled percentile</td><td>17%</td></tr>
+<tr><td>Career Box Plus/Minus (BPM), percentile, minutes-adjusted</td><td>8%</td></tr>
+<tr><td>Bounded achievement / honors index</td><td>16%</td></tr>
+</tbody></table>
+<p>The honors index gives larger credit to MVP, Finals MVP and All-NBA First Team than to All-Star selections or regular-season team membership with the eventual champion. Honor credit is capped so team achievements cannot overwhelm sustained individual production. This is a model of observed career accomplishments, not a causal measure of player skill or an NBA prediction system.</p>
+<h2>Draft value and grade (A+ through F)</h2>
+<p>The expected quality of a pick is empirically fit using the mature 2000–2017 cohorts, split into overall-pick bands: 1–3, 4–10, 11–20, 21–30, 31–45 and 46–60. The bands are regularized and constrained to nonincreasing expectations across later draft positions. A draft-value score is derived from <code>50 + 1.35 × (quality − expected)</code>, clipped to 0–100, then mapped to letter grades. Thus a late second-rounder can earn an A with a less accomplished career than a top-three pick.</p>
+<p><strong>Career maturity:</strong> draft classes 2024–2026 have no letter grades; 2022–2023 only receive provisional positive grades. More recent classes may have preliminary quality measurements, but short careers must not be interpreted as busts.</p>
+<h2>Accolades and known limitations</h2>
+<ul>
+<li><strong>MVP, Defensive Player of the Year, Finals MVP and Rookie of the Year:</strong> winner seasons 2000–2026. These are NBA annual award winner ledgers, not all vote recipients.</li>
+<li><strong>All-NBA:</strong> first, second and third team selections, 2000–2026, matched by player and draft chronology. Tied or name-ambiguous matches remain unassigned rather than guessed.</li>
+<li><strong>All-Defensive:</strong> first/second team season detail is verified only for 2016–2026 in this version. Pre-2016 entries are not treated as confirmed zeros. As a result, the honors index understates some older elite defenders.</li>
+<li><strong>All-Star:</strong> available career selection counts from a Wikipedia-derived history; the dataset does not provide a verified per-season All-Star list and therefore no seasons are invented.</li>
+<li><strong>NBA titles:</strong> the displayed count is a regular-season appearance for a team that ultimately won the championship that season, NOT an independent count of championship rings, Finals appearances or postseason roster eligibility.</li>
+<li><strong>2026 draft:</strong> selection records and prospect positions are included. The 2026–27 NBA season is in progress, so these rookies are ungraded.</li>
+</ul>
+<h2>Backtest and data quality</h2>
+<p>On the 2018–2020 draft-class retrospective holdout (180 players), the empirical pick-band model yielded RMSE <strong>18.58</strong>, compared with <strong>20.89</strong> from a constant reference mean. This tests historical association between draft position and eventual quality, not forecasts of the future. Full source checksums, identity checks, match audits, computation and private model code are held in the private research repository. The website publishes only allowlisted derived player-level results.</p>
+<h2>Upstream sources and credit</h2>
+<ul>
+<li><a href="https://github.com/ismayc/draft-potential-by-team">Draft Potential by Team</a> — NBA draft selections, ID-matched career statistics and draft-era advanced impact metrics. Upstream project source distribution is MIT-licensed; data content retains its own applicable rights.</li>
+<li><a href="https://github.com/gmalim/NBA_analysis">NBA_analysis</a> — historic All-NBA teams.</li>
+<li><a href="https://github.com/CharlesSouth/nba_pbp">NBA play-by-play award research</a> — modern season-level All-NBA and All-Defensive teams.</li>
+<li><a href="https://github.com/miamiasheep/nba_analysis">NBA analysis All-Star history</a> — Wikipedia-derived career selection counts.</li>
+<li><a href="https://www.nba.com/awards/2026">NBA awards</a> and <a href="https://www.nba.com/draft/history">NBA Draft History</a> — league award and draft cross-checks; <a href="https://www.nba.com/playoffs/2026/nba-finals">2026 NBA Finals</a>.</li>
+</ul>
+<p>Results are derived research metrics and are not endorsed by the NBA. We provide no raw archive download from this site.</p>
+<p><a href="./">Back to Draft Reports ↗</a></p>
+</main></body></html>
