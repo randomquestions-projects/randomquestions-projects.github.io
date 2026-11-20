@@ -195,7 +195,10 @@ function renderSources(d){
   const src=d.source||{},o=d.outcome_source||{};
   const meta=d.coverage||{};
   const adplink=cleanLink(src.url),actual=cleanLink(o.url);
+  const coverageCounts=SITES.map(site=>site+": "+d.players.filter(p=>isNum(p.adp?.[site])).length).join(" · ");
+  const snapshotNote=d.year===2026?'2026 sources: ESPN, Sleeper, CBS, RTSports and Fantrax frozen in the August 1 archive; Yahoo from the September 8 preseason board with July 29 fallback. NFL.com unavailable. 2026 records and player-site coverage vary by provider.':'Historical snapshots and source availability vary by season.';
   $("sources").innerHTML='<div class="source-title">DATA & METHODOLOGY · VERIFIABLE SOURCES</div>'+
+    '<p><strong>ADP coverage:</strong> '+esc(coverageCounts)+' ('+val(d.players.length)+' unique archived players). '+esc(snapshotNote)+'</p>'+
     '<p><strong>Preseason ADP:</strong> '+esc(src.provider||"Archived multi-source ADP")+
     ' · <a href="'+esc(adplink)+'" target="_blank" rel="noopener noreferrer">Archive provenance ↗</a>. Only available platform observations contribute to the arithmetic mean; no site values are invented. FP Composite is the archived FantasyPros aggregate shown separately, never double-counted as a platform in the average. Historical snapshot dates before 2025 have not all been independently verified. Team labels are reconciled against season stats where available.</p>'+
     '<p><strong>Actual finishes:</strong> <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noopener noreferrer">nflverse NFL player data ↗</a>'+
