@@ -55,14 +55,14 @@
       <div id="dashboard" hidden>
         <div class="stat-row" id="stat-row" aria-label="Season overview"></div>
         <section class="tab-panel" id="panel-board" role="tabpanel" aria-labelledby="tab-board">
-          <div class="panel-head"><div><h3>Draft board <span class="head-muted">/ expectation gap</span></h3><p>One row per player. Green outperformed average ADP; red finished worse. Select a column to sort.</p></div><div class="summary-help" id="board-summary"></div></div>
+          <div class="panel-head"><div><h3>Draft board <span class="head-muted">/ expectation gap</span></h3><p>One row per player. Green beat preseason expectations at the same position; red underperformed. Select a column to sort.</p></div><div class="summary-help" id="board-summary"></div></div>
           <div class="toolbar">
             <label class="control"><span>POSITION</span><select id="position"><option value="ALL">All positions</option><option value="QB">Quarterbacks</option><option value="RB">Running backs</option><option value="WR">Wide receivers</option><option value="TE">Tight ends</option></select></label>
             <label class="control"><span>TEAM</span><select id="team"><option value="ALL">All teams</option></select></label>
             <label class="control control-search"><span>PLAYER SEARCH</span><input id="search" type="search" autocomplete="off" placeholder="Search player name…" aria-label="Search player"></label>
-            <label class="control"><span>SHADE ROWS BY</span><select id="board-scoring"><option value="ppr">PPR gap</option><option value="std">Standard gap</option></select></label><label class="control"><span>GAP BASIS</span><select id="gap-basis"><option value="raw">Actual finish rank</option><option value="value">Roster-adjusted value</option></select></label>
+            <label class="control"><span>SHADE ROWS BY</span><select id="board-scoring"><option value="ppr">PPR gap</option><option value="std">Standard gap</option></select></label>
           </div>
-          <div class="board-legend"><span><i class="legend-square good"></i> Beat expectations</span><span><i class="legend-square bad"></i> Below expectations</span><span><i class="legend-square even"></i> Near expectations / unavailable</span><span class="legend-note">Δ = avg draft pick − actual finish rank (higher is better)</span></div>
+          <div class="board-legend"><span><i class="legend-square good"></i> Beat expectations</span><span><i class="legend-square bad"></i> Below expectations</span><span><i class="legend-square even"></i> Near expectations / unavailable</span><span class="legend-note">Δ = positional ADP rank − positional finish rank (higher is better; ±2 positions shaded)</span></div>
           <div class="table-wrap" role="region" aria-label="Sortable player rankings table" tabindex="0">
             <table id="rank-table"><thead id="rank-head"></thead><tbody id="rank-body"></tbody></table>
           </div>
@@ -80,7 +80,7 @@
           </div>
         </section>
         <section class="tab-panel" id="panel-insights" role="tabpanel" aria-labelledby="tab-insights" hidden>
-          <div class="panel-head"><div><h3>The season's biggest surprises</h3><p>Top-10 draft steals and disappointments among the first 180 average picks, based on actual ranking against draft price.</p></div><div class="insight-filters"><label class="control"><span>OUTCOME MEASURE</span><select id="insight-scoring"><option value="ppr">PPR</option><option value="std">Standard</option></select></label><label class="control"><span>RANK BASIS</span><select id="insight-basis"><option value="value">Roster-adjusted value</option><option value="raw">Actual points rank</option></select></label></div></div>
+          <div class="panel-head"><div><h3>The season's biggest surprises</h3><p>Top-10 draft steals and disappointments among the first 180 average draft picks, comparing preseason and actual ranks within each position.</p></div><div class="insight-filters"><label class="control"><span>OUTCOME MEASURE</span><select id="insight-scoring"><option value="ppr">PPR</option><option value="std">Standard</option></select></label></div></div>
           <div id="insight-intro" class="insight-intro"></div>
           <div class="insights-grid"><section class="ranked-list success-list"><div class="ranked-list-head"><div class="card-kicker"><span class="badge-ring">↗</span> MOST UNDERVALUED</div><h4>Top 10 draft steals</h4><p>Biggest positive difference vs. preseason consensus.</p></div><div id="steals-list"></div></section><section class="ranked-list failure-list"><div class="ranked-list-head"><div class="card-kicker"><span class="badge-ring">↘</span> BIGGEST MISSES</div><h4>Top 10 draft busts</h4><p>Biggest negative difference vs. preseason consensus.</p></div><div id="busts-list"></div></section></div>
           <div id="insight-footer" class="insight-footer"></div>
