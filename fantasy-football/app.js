@@ -7,7 +7,7 @@ const YEARS=[2026,2025,2024,2023,2022,2021,2020,2019,2018,2017,2016,2015];
 const store=new Map();
 const positionalRanks=new WeakMap();
 let historicalReady=false,historicalLoading=false;
-const state={year:2026,tab:"board",pos:"ALL",team:"ALL",search:"",boardMetric:"ppr",sort:"avg_adp",asc:true,accuracyMetric:"ppr",accuracyBasis:"value",insightMetric:"ppr"};
+const state={year:2026,tab:"board",pos:"ALL",team:"ALL",search:"",boardMetric:"ppr",sort:"avg_adp",asc:true,accuracyMetric:"ppr",accuracyBasis:"value",insightMetric:"ppr",insightPos:"ALL"};
 const $=id=>document.getElementById(id);
 const fmt=new Intl.NumberFormat("en-US",{maximumFractionDigits:1});
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -207,7 +207,7 @@ async function ensureHistorical(){
 
 function renderInsights(d){
   const m=state.insightMetric;
-  const eligible=d.players.filter(p=>p.avg_adp<=180&&isNum(gap(p,m)));
+  const eligible=d.players.filter(p=>p.avg_adp<=180&&isNum(gap(p,m))&&(state.insightPos==="ALL"||p.pos===state.insightPos));
   const good=[...eligible].sort((a,b)=>gap(b,m)-gap(a,m)).filter(p=>gap(p,m)>0).slice(0,10);
   const bad=[...eligible].sort((a,b)=>gap(a,m)-gap(b,m)).filter(p=>gap(p,m)<0).slice(0,10);
   $("steals-list").innerHTML=insightList(good,m,"good");
@@ -215,7 +215,7 @@ function renderInsights(d){
   const beat=eligible.filter(p=>gap(p,m)>0).length;
   const missed=eligible.filter(p=>gap(p,m)<0).length;
   const provisional=d.season_status==="IN_PROGRESS";
-  $("insight-intro").innerHTML='<strong>'+val(eligible.length)+' verifiable early-draft selections</strong> ('+stdMetric(m)+') · '+val(beat)+' above positional ADP, '+val(missed)+' below. '+
+  $("insight-intro").innerHTML='<strong>'+val(eligible.length)+' verifiable early-draft selections</strong> ('+stdMetric(m)+(state.insightPos==="ALL"?" · all positions":" · "+state.insightPos)+') · '+val(beat)+' above positional ADP, '+val(missed)+' below. '+
      (provisional?'<strong>2026 is season-to-date.</strong> These are provisional results, not final bust or steal judgments.':'Finished regular-season results; the first 180 average overall ADP picks define the draft cohort.');
   $("insight-footer").textContent="Selection rule: overall average ADP ≤180, verified regular-season player match. We rank every archived preseason player within their position by average ADP, then subtract that player's actual "+stdMetric(m)+" positional finish rank. A positive positional-rank difference is a steal; a negative difference is a miss. Missing or unmatched outcomes are never counted as busts. Rankings use season total points, so injuries and missed games matter.";
 }
@@ -283,6 +283,7 @@ function init(){
   $("accuracy-scoring").addEventListener("change",e=>{state.accuracyMetric=e.target.value;renderAccuracy(current())});
   $("accuracy-basis").addEventListener("change",e=>{state.accuracyBasis=e.target.value;renderAccuracy(current())});
   $("insight-scoring").addEventListener("change",e=>{state.insightMetric=e.target.value;renderInsights(current())});
+  $("insight-position").addEventListener("change",e=>{state.insightPos=e.target.value;renderInsights(current())});
   $("rank-head").addEventListener("click",e=>{
     const b=e.target.closest("button[data-sort]");
     if(!b)return;
