@@ -42,17 +42,19 @@ jobs:
                   assert p["career"] is not None
                   assert p["career_status"]
                   if year>=2024:assert p["rating"] is None
+                  assert isinstance(p["career"]["awards"]["total_all_pro"],int)
+                  assert p["career"]["awards"]["total_all_pro"]>=p["career"]["awards"]["first_team_all_pro"]
                   if p["rating"]:
                       r=p["rating"]
                       assert 0<=r["quality"]<=100
                       assert 0<=r["value"]<=100
-                      assert r["model_version"]=="nfl-draft-v1"
+                      assert r["model_version"]=="nfl-draft-v2"
                       if r["grade"]:graded+=1
               total+=len(players)
           assert total==6901,(total,graded)
           assert graded>=5500,graded
           site=pathlib.Path("draft-reports/index.html").read_text()
-          assert "NFL v1" in site
+          assert "NFL v2" in site
           assert "player-dialog" in site and 'id="year-filter"' in site
           print(f"Validated {total} NFL draft picks across 27 drafts, {graded} grades.")
           PY
