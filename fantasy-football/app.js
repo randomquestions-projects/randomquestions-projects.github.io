@@ -46,7 +46,8 @@ const validData=d=>d&&d.year===state.year&&Array.isArray(d.players)&&d.players.l
 function rankCols(){
   const items=[{k:"name",h:"Player"},{k:"avg_adp",h:"Avg. ADP"},{k:"pos_adp",h:"Pos. ADP"}];
   for(const k of DISPLAY_SITES)items.push({k:"adp_"+k,h:SITE_SHORT[k]||k});
-  items.push({k:"std_rank",h:"STD pos. finish"},{k:"ppr_rank",h:"PPR pos. finish"},
+  items.push({k:"std_pos_rank",h:"STD pos. finish"},{k:"ppr_pos_rank",h:"PPR pos. finish"},
+             {k:"std_overall_rank",h:"Overall STD"},{k:"ppr_overall_rank",h:"Overall PPR"},
              {k:"delta_std",h:"Δ STD"},{k:"delta_ppr",h:"Δ PPR"});
   return items;
 }
@@ -55,7 +56,8 @@ function sortvalue(p,k){
   if(k==="avg_adp")return p.avg_adp;
   if(k==="pos_adp")return posADP(p);
   if(k.startsWith("adp_"))return platformADP(p,k.slice(4));
-  if(k.endsWith("_rank"))return posOutcome(p,k.startsWith("ppr")?"ppr":"std");
+  if(k.endsWith("_pos_rank"))return posOutcome(p,k.startsWith("ppr")?"ppr":"std");
+  if(k.endsWith("_overall_rank"))return outcome(p,k.startsWith("ppr")?"ppr":"std");
   if(k.startsWith("delta_"))return gap(p,k.endsWith("ppr")?"ppr":"std");
   return null;
 }
@@ -108,13 +110,15 @@ function renderBoard(d){
       ...DISPLAY_SITES.map(s=>'<td title="'+(s==="FantasyPros"?"FantasyPros consensus benchmark — excluded from average ADP":esc(s)+" preseason ADP")+'" class="'+(platformADP(p,s)==null?"empty-cell":"adp-cell")+'">'+val(platformADP(p,s))+'</td>'),
       '<td class="rank-primary">'+(posOutcome(p,"std")==null?"—":esc(p.pos)+val(posOutcome(p,"std")))+'</td>',
       '<td class="rank-primary">'+(posOutcome(p,"ppr")==null?"—":esc(p.pos)+val(posOutcome(p,"ppr")))+'</td>',
+      '<td class="rank-primary">'+(outcome(p,"std")==null?"—":"#"+val(outcome(p,"std")))+'</td>',
+      '<td class="rank-primary">'+(outcome(p,"ppr")==null?"—":"#"+val(outcome(p,"ppr")))+'</td>',
       ...["std","ppr"].map(m=>{
         const g=gap(p,m);
         return '<td class="delta-val '+(g==null?"empty-cell":g>0?"positive":g<0?"negative":"")+'">'+sign(g)+'</td>';
       })];
     return '<tr class="'+esc(cls)+'">'+name+cells.join("")+"</tr>";
   }).join("");
-  if(!rows.length)$("rank-body").innerHTML='<tr><td colspan="15" class="no-data">No players match these filters.</td></tr>';
+  if(!rows.length)$("rank-body").innerHTML='<tr><td colspan="17" class="no-data">No players match these filters.</td></tr>';
   $("row-count").textContent=rows.length+" of "+d.players.length+" players";
   $("board-summary").textContent="Sorted by "+(columns.find(c=>c.k===state.sort)?.h||"ADP")+" "+(state.asc?"↑":"↓");
 }
@@ -229,7 +233,7 @@ function renderSources(d){
     ' · '+(actual!=="#"?'<a href="'+esc(actual)+'" target="_blank" rel="noopener noreferrer">Season-specific regular-season CSV ↗</a> · ':"")+
     'Regular-season standard (0 PPR) and full PPR total points, NFL fantasy scoring. '+esc(d.season_status==="IN_PROGRESS"?"2026 actuals reflect the current available season-to-date data.":"Historical seasons use final outcomes.")+
     ' Player matches: '+val(meta.matched)+' of '+val(meta.adp_players)+' archived ADP rows.</p>'+
-    '<p><strong>Player rankings and steals/busts:</strong> Positional ADP is the rank of each QB, RB, WR or TE within that season’s archived preseason player pool, ordered by average overall ADP (equal ADPs share a rank). STD/PPR positional finish ranks use season-total fantasy points for that position. Δ = positional ADP rank − positional finish rank; positive means a player outperformed preseason expectations. Green/red row shading uses the selected STD or PPR positional gap: at least ±2 positions is shaded, at least ±8 is emphasized. The overall ADP and per-site ADP columns still show overall draft-pick numbers for context.</p>'+
+    '<p><strong>Player rankings and steals/busts:</strong> Positional ADP is the rank of each QB, RB, WR or TE within that season’s archived preseason player pool, ordered by average overall ADP (equal ADPs share a rank). STD/PPR positional finish ranks use season-total fantasy points for that position. Δ = positional ADP rank − positional finish rank; positive means a player outperformed preseason expectations. Green/red row shading uses the selected STD or PPR positional gap: at least ±2 positions is shaded, at least ±8 is emphasized. The overall ADP and per-site ADP columns still show overall draft-pick numbers for context. The sortable Overall STD and Overall PPR columns report the original all-position fantasy-points ranks. Those overall rankings do not affect deltas, row colors, or positional expectations.</p>'+
     '<p><strong>Site accuracy is a separate overall-pick analysis:</strong> It compares overall draft picks with either overall total-points ranks or 12-team, 1QB replacement-adjusted value ranks (QB12 / RB30 / WR36 / TE12). These are not the positional gaps used for the player board. ADP varies in scoring format and market timing; cross-site comparisons are descriptive. No missing source values or outcomes are invented.</p>';
 }
 function render(){
