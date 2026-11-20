@@ -6,6 +6,10 @@ on:
       - 'draft-reports/**'
       - '.github/workflows/draft-reports-verify.yml'
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'draft-reports/**'
+      - '.github/workflows/draft-reports-verify.yml'
 permissions:
   contents: read
 jobs:
