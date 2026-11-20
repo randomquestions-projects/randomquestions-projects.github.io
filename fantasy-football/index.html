@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f6f8fb">
+<meta name="description" content="Fantasy Football Expectations: compare historical preseason ADP across ESPN, Sleeper, Yahoo, CBS, NFL, RTSports and Fantrax against actual standard and PPR finishes, 2015–2026.">
+<meta property="og:title" content="Fantasy Football | Expectations vs. Reality">
+<meta property="og:description" content="Who beat draft expectations? Compare 2020–2026 ADP, actual fantasy rankings, platform accuracy and the biggest steals and busts.">
+<link rel="icon" type="image/svg+xml" href="./favicon.svg">
+<link rel="stylesheet" href="./styles.css">
+<title>Fantasy Football — Expectations vs. Reality | Random Questions</title>
+<script src="./app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<div class="site">
+  <header class="topbar">
+    <a class="brand" href="../" aria-label="Random Questions home"><span class="brand-mark">rq<span>.</span></span><span class="brand-text">random questions</span></a>
+    <nav class="top-links" aria-label="Primary"><a href="../" class="back-link">← All projects</a><span class="nav-rule"></span><span class="nav-series">NFL ANALYTICS LAB</span></nav>
+  </header>
+  <main id="content">
+    <section class="hero">
+      <div class="hero-text">
+        <div class="eyebrow"><span class="live-dot"></span> FANTASY FOOTBALL INTELLIGENCE <span class="eyebrow-slash">/</span> 2015—2026</div>
+        <h1>Expectations <span>vs. reality.</span></h1>
+        <p class="hero-sub">Twelve draft seasons. Multiple platforms. One question: <strong>who actually delivered on the hype?</strong> Follow every pick from preseason draft price to real fantasy production.</p>
+        <div class="hero-meta"><span class="hero-pill">12 historical seasons</span><span class="hero-pill">7 potential ADP sources + FP composite</span><span class="hero-pill">Standard + PPR</span></div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="art-glow"></div>
+        <div class="chart-stage">
+          <div class="chart-title"><span>PRESEASON HYPE</span><span>ACTUAL FINISH</span></div>
+          <svg viewBox="0 0 440 220" role="img" aria-label="Illustrative divergent fantasy performance trend"><defs><linearGradient id="up" x1="0" x2="1" y1="1" y2="0"><stop stop-color="#69b4a3"/><stop offset="1" stop-color="#166e5c"/></linearGradient><linearGradient id="down" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#eeb0a0"/><stop offset="1" stop-color="#be5e56"/></linearGradient></defs><g stroke="#dce6e7" stroke-width="1"><path d="M0 40H440M0 90H440M0 140H440M0 190H440"/></g><path d="M5 113C75 118 100 129 162 110S250 83 294 63 380 31 435 17" fill="none" stroke="url(#up)" stroke-width="4" stroke-linecap="round"/><path d="M5 113C69 117 107 109 165 133S262 143 294 162 376 176 435 210" fill="none" stroke="url(#down)" stroke-width="4" stroke-linecap="round"/><circle cx="294" cy="63" r="6" fill="#176d5a" stroke="#fff" stroke-width="4"/><circle cx="294" cy="162" r="6" fill="#c2685f" stroke="#fff" stroke-width="4"/></svg>
+          <div class="chart-foot"><span class="foot-green">▲ DRAFT STEALS</span><span class="foot-red">▼ DRAFT BUSTS</span></div>
+        </div>
+      </div>
+    </section>
+    <section class="workspace" aria-label="Fantasy football research dashboard">
+      <div class="section-head">
+        <div class="section-titles"><div class="section-overline">THE RESEARCH DESK <span>/</span> <span id="season-label">2026 SEASON</span></div><h2>Explore the season<span class="accent-dot">.</span></h2></div>
+        <div class="season-controls">
+          <label for="year">SEASON</label>
+          <select id="year" aria-label="Season year"><option>2026</option><option>2025</option><option>2024</option><option>2023</option><option>2022</option><option>2021</option><option>2020</option><option>2019</option><option>2018</option><option>2017</option><option>2016</option><option>2015</option></select>
+          <span id="season-status" class="season-tag" aria-live="polite">Loading season…</span>
+        </div>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Dashboard views">
+        <button class="tab active" id="tab-board" data-tab="board" role="tab" aria-selected="true" aria-controls="panel-board"><span class="tab-num">01</span> Player rankings</button>
+        <button class="tab" id="tab-sites" data-tab="sites" role="tab" aria-selected="false" aria-controls="panel-sites"><span class="tab-num">02</span> Site accuracy</button>
+        <button class="tab" id="tab-insights" data-tab="insights" role="tab" aria-selected="false" aria-controls="panel-insights"><span class="tab-num">03</span> Steals &amp; busts</button>
+      </div>
+      <div id="loading" class="loading" role="status">Loading verified player-season records…</div>
+      <div id="error" class="error" role="alert" hidden></div>
+      <div id="dashboard" hidden>
+        <div class="stat-row" id="stat-row" aria-label="Season overview"></div>
+        <section class="tab-panel" id="panel-board" role="tabpanel" aria-labelledby="tab-board">
+          <div class="panel-head"><div><h3>Draft board <span class="head-muted">/ expectation gap</span></h3><p>One row per player. Green outperformed average ADP; red finished worse. Select a column to sort.</p></div><div class="summary-help" id="board-summary"></div></div>
+          <div class="toolbar">
+            <label class="control"><span>POSITION</span><select id="position"><option value="ALL">All positions</option><option value="QB">Quarterbacks</option><option value="RB">Running backs</option><option value="WR">Wide receivers</option><option value="TE">Tight ends</option></select></label>
+            <label class="control"><span>TEAM</span><select id="team"><option value="ALL">All teams</option></select></label>
+            <label class="control control-search"><span>PLAYER SEARCH</span><input id="search" type="search" autocomplete="off" placeholder="Search player name…" aria-label="Search player"></label>
+            <label class="control"><span>SHADE ROWS BY</span><select id="board-scoring"><option value="ppr">PPR gap</option><option value="std">Standard gap</option></select></label><label class="control"><span>GAP BASIS</span><select id="gap-basis"><option value="raw">Actual finish rank</option><option value="value">Roster-adjusted value</option></select></label>
+          </div>
+          <div class="board-legend"><span><i class="legend-square good"></i> Beat expectations</span><span><i class="legend-square bad"></i> Below expectations</span><span><i class="legend-square even"></i> Near expectations / unavailable</span><span class="legend-note">Δ = avg draft pick − actual finish rank (higher is better)</span></div>
+          <div class="table-wrap" role="region" aria-label="Sortable player rankings table" tabindex="0">
+            <table id="rank-table"><thead id="rank-head"></thead><tbody id="rank-body"></tbody></table>
+          </div>
+          <div class="table-footer"><span id="row-count" role="status" aria-live="polite"></span><span>Scroll horizontally to compare every site <span aria-hidden="true">↔</span></span></div>
+        </section>
+        <section class="tab-panel" id="panel-sites" role="tabpanel" aria-labelledby="tab-sites" hidden>
+          <div class="panel-head"><div><h3>How accurate was each site?</h3><p>Compare the draft markets with what happened on the field, using the <strong>same player sample</strong> for each available site.</p></div></div>
+          <div class="toolbar compact-toolbar"><label class="control"><span>OUTCOME MEASURE</span><select id="accuracy-scoring"><option value="ppr">PPR finish</option><option value="std">Standard finish</option></select></label><label class="control"><span>RANK BASIS</span><select id="accuracy-basis"><option value="value">Roster-adjusted value rank</option><option value="raw">All-player total points rank</option></select></label></div>
+          <div id="accuracy-callout" class="insight-callout"></div>
+          <div class="accuracy-layout"><div class="accuracy-table-wrap"><table class="accuracy-table"><thead><tr><th>Site</th><th>Mean absolute error <small>↓ better</small></th><th>Within 12 picks <small>↑ better</small></th><th>Avg. signed gap</th><th>Matched players</th></tr></thead><tbody id="accuracy-body"></tbody></table></div><div class="accuracy-panel"><h4>How to read this</h4><p id="accuracy-explanation"></p><div class="method-rule"></div><div class="sub-kicker">COMMON COHORT</div><div class="large-number" id="common-count">—</div><p class="small-muted">Players with preseason values at every eligible source, an actual result, and average ADP within the first 150 picks.</p></div></div>
+          <div class="caution-note"><span>ⓘ</span> A site’s ADP captures <em>draft behavior</em>, not a fantasy-points prediction. These are descriptive comparisons, not validated forecast-calibration scores. Site coverage and league scoring settings vary.</div>
+          <div class="history-section"><div class="history-heading"><div class="section-overline">2015–2025 · HISTORICAL TRACK RECORD</div><h3>Who is consistently closest?</h3><p id="history-summary">Comparing platform performance across completed seasons…</p></div>
+            <div class="accuracy-table-wrap"><table class="accuracy-table"><thead><tr><th>Platform</th><th>Years evaluated</th><th>Avg. error vs same-year peers <small>negative is better</small></th><th>Mean error</th><th>Years ranked #1</th></tr></thead><tbody id="historical-body"></tbody></table></div>
+            <div class="history-footnote">Annual comparisons use the same player cohort across available platforms. Multi-year scores average each platform’s within-year difference against its eligible peers, not raw errors across incomparable historical cohorts. Incomplete 2026 is excluded.</div>
+          </div>
+        </section>
+        <section class="tab-panel" id="panel-insights" role="tabpanel" aria-labelledby="tab-insights" hidden>
+          <div class="panel-head"><div><h3>The season's biggest surprises</h3><p>Top-10 draft steals and disappointments among the first 180 average picks, based on actual ranking against draft price.</p></div><div class="insight-filters"><label class="control"><span>OUTCOME MEASURE</span><select id="insight-scoring"><option value="ppr">PPR</option><option value="std">Standard</option></select></label><label class="control"><span>RANK BASIS</span><select id="insight-basis"><option value="value">Roster-adjusted value</option><option value="raw">Actual points rank</option></select></label></div></div>
+          <div id="insight-intro" class="insight-intro"></div>
+          <div class="insights-grid"><section class="ranked-list success-list"><div class="ranked-list-head"><div class="card-kicker"><span class="badge-ring">↗</span> MOST UNDERVALUED</div><h4>Top 10 draft steals</h4><p>Biggest positive difference vs. preseason consensus.</p></div><div id="steals-list"></div></section><section class="ranked-list failure-list"><div class="ranked-list-head"><div class="card-kicker"><span class="badge-ring">↘</span> BIGGEST MISSES</div><h4>Top 10 draft busts</h4><p>Biggest negative difference vs. preseason consensus.</p></div><div id="busts-list"></div></section></div>
+          <div id="insight-footer" class="insight-footer"></div>
+        </section>
+      </div>
+      <div class="sources" id="sources"><div class="source-title">DATA & METHODOLOGY</div><p>Data and source notes appear once the season loads.</p></div>
+    </section>
+  </main>
+  <footer class="footer"><span><b>random questions.</b> Independent sports analytics</span><span>Built to test the expectations, not reinforce them.</span><a href="../">Back to the collection ↗</a></footer>
+</div>
+</body></html>
