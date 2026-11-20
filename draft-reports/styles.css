@@ -19,3 +19,9 @@
 .season-title{margin:0 0 12px;font-size:12px;letter-spacing:-.01em;color:#496d54}
 .season-chip{display:inline-block;font-size:10px;padding:6px 9px;background:#e9f1e8;color:#567760;border-radius:5px;margin:0 5px 7px 0}
 .season-disclaimer{font-size:10px;color:#879688;line-height:1.6}
+
+/* Three independent evaluation dimensions. */
+.method-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.profile-scores{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:780px){.method-grid{grid-template-columns:1fr}}
+@media(max-width:440px){.profile-scores{grid-template-columns:1fr}}

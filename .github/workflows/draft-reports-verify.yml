@@ -6,6 +6,10 @@ on:
       - 'draft-reports/**'
       - '.github/workflows/draft-reports-verify.yml'
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'draft-reports/**'
+      - '.github/workflows/draft-reports-verify.yml'
 permissions:
   contents: read
 jobs:
@@ -40,6 +44,7 @@ jobs:
                   assert p["year"]==year and p["league"]=="NFL"
                   assert p["name"] and p["team"] and p["position"]
                   assert p["career"] is not None
+                  assert "pace" in p
                   assert p["career_status"]
                   if year>=2024:assert p["rating"] is None
                   assert isinstance(p["career"]["awards"]["total_all_pro"],int)
@@ -48,13 +53,14 @@ jobs:
                       r=p["rating"]
                       assert 0<=r["quality"]<=100
                       assert 0<=r["value"]<=100
-                      assert r["model_version"]=="nfl-draft-v2"
+                      assert r["model_version"]=="nfl-draft-v3"
+                      assert r["grade_basis"] in ("career_quality","career_pace")
                       if r["grade"]:graded+=1
               total+=len(players)
           assert total==6901,(total,graded)
           assert graded>=5500,graded
           site=pathlib.Path("draft-reports/index.html").read_text()
-          assert "NFL v2" in site
+          assert "NFL V3" in site
           assert "player-dialog" in site and 'id="year-filter"' in site
           print(f"Validated {total} NFL draft picks across 27 drafts, {graded} grades.")
           PY
@@ -68,7 +74,7 @@ jobs:
           for year in range(2000,2027):
               data=json.loads((root/f"{year}.json").read_text())
               assert data["schema_version"]==2 and data["league"]=="NBA" and data["year"]==year
-              assert data["model_version"]=="nba-draft-v1"
+              assert data["model_version"]=="nba-draft-v2"
               assert data["attribution"]
               players=data["picks"]
               assert 56<=len(players)<=60
@@ -80,12 +86,14 @@ jobs:
                   assert not any(k.startswith("_") for k in p)
                   assert not any(k.startswith("_") for k in p["career"])
                   assert "awards" in p["career"] and "all_nba_total" in p["career"]["awards"]
+                  assert "pace" in p
                   assert p["career"]["awards"]["all_nba_total"]>=p["career"]["awards"]["all_nba_first"]
                   if year>=2024: assert p["rating"] is None
                   if p["rating"] is not None:
                       assert 0<=p["rating"]["quality"]<=100
                       assert 0<=p["rating"]["value"]<=100
-                      assert p["rating"]["model_version"]=="nba-draft-v1"
+                      assert p["rating"]["model_version"]=="nba-draft-v2"
+                      assert p["rating"]["grade_basis"] in ("career_quality","career_pace")
                       if p["rating"]["grade"]:graded+=1
               total+=len(players)
           assert total==1602,(total,graded)

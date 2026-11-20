@@ -49,10 +49,11 @@
     rows.sort((a,b) => {
       if (state.sort === 'name') return a.name.localeCompare(b.name) || a.overall - b.overall;
       if (state.sort === 'team') return a.team.localeCompare(b.team) || a.overall - b.overall;
-      if (state.sort === 'quality' || state.sort === 'value') {
+      if (state.sort === 'quality' || state.sort === 'value' || state.sort === 'pace') {
         const key = state.sort;
-        const x = a.rating && Number.isFinite(a.rating[key]) ? a.rating[key] : -1;
-        const y = b.rating && Number.isFinite(b.rating[key]) ? b.rating[key] : -1;
+        const get = p => key === 'pace' ? p.pace?.score : p.rating?.[key];
+        const x = Number.isFinite(get(a)) ? get(a) : -1;
+        const y = Number.isFinite(get(b)) ? get(b) : -1;
         return y - x || a.overall - b.overall;
       }
       return a.overall - b.overall;
@@ -78,6 +79,7 @@
     const quality = p.rating && typeof p.rating.quality === 'number' ? p.rating.quality.toFixed(1) : null;
     const grade = p.rating && p.rating.grade ? p.rating.grade : null;
     cell(tr, safeText('span', 'score-pending', quality === null ? (p.career_status === 'too_early' ? 'Too early' : 'Not rated') : quality));
+    cell(tr, safeText('span', 'score-pending', p.pace && Number.isFinite(p.pace.score) ? p.pace.score.toFixed(1) : '—'));
     cell(tr, safeText('span', 'grade-pending', grade || '—'));
     const btn = safeText('button', 'row-button', '↗');
     btn.type = 'button';
@@ -174,6 +176,8 @@
     $('profile-meta').textContent = 'Round ' + p.round + ' · Pick #' + p.overall + ' · ' + p.team + (p.position ? ' · ' + p.position : '');
     $('profile-quality').textContent = p.rating && typeof p.rating.quality === 'number' ? p.rating.quality.toFixed(1) : '—';
     $('profile-grade').textContent = p.rating && p.rating.grade ? p.rating.grade : '—';
+    $('profile-pace').textContent = p.pace && Number.isFinite(p.pace.score) ? p.pace.score.toFixed(1) : '—';
+    $('profile-pace-note').textContent = p.pace ? p.pace.band + ' · ' + p.pace.seasons + ' completed seasons · ' + p.pace.peer_count + ' peers' : 'Insufficient completed-season data';
     $('profile-source-link').href = p.league === 'NFL' ?
       'https://github.com/nflverse/nflverse-data' : sourceLinks.NBA;
     const career = p.career || null;
@@ -273,7 +277,7 @@
     const sourceNote=document.querySelector('.profile-source > span:nth-child(2)');
     if(sourceNote)sourceNote.textContent = career ?
       ('Career scoring ' + (p.rating ? (p.rating.maturity === 'final' ? 'established-career snapshot' : 'provisional') : 'too early to grade')+
-       ' · Source: '+(p.league==='NBA'?'NBA Stats / Basketball-Reference':'nflverse')+' · Model '+(p.rating ? p.rating.model_version : 'not assigned')) :
+       ' · Grade basis: '+(p.rating?.grade_basis === 'career_pace' ? 'tenure-adjusted pace' : 'career quality') + ' · Source: '+(p.league==='NBA'?'NBA Stats / Basketball-Reference':'nflverse')+' · Model '+(p.rating ? p.rating.model_version : 'not assigned')) :
       'Draft selection verified · career measurements pending';
 
     if (!$('player-dialog').open) $('player-dialog').showModal();
