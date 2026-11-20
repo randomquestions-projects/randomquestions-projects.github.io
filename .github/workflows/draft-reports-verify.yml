@@ -1,0 +1,58 @@
+name: Validate Draft Reports website and research exports
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'draft-reports/**'
+      - '.github/workflows/draft-reports-verify.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check frontend JavaScript syntax
+        run: node --check draft-reports/app.js
+      - name: Verify all NFL draft exports, ratings and licensing fields
+        run: |
+          python3 - <<'PY'
+          import json,pathlib
+          root=pathlib.Path("draft-reports/data/nfl")
+          total=0;graded=0
+          for year in range(2000,2027):
+              data=json.loads((root/f"{year}.json").read_text())
+              assert data["schema_version"]==2
+              assert data["year"]==year and data["league"]=="NFL"
+              assert "nflverse" in data["attribution"].lower()
+              players=data["picks"]
+              assert 200 <= len(players)<=300
+              assert [p["overall"] for p in players]==list(range(1,len(players)+1))
+              assert len({p["id"] for p in players})==len(players)
+              assert all(not any(k.startswith("_") for k in p) for p in players)
+              assert all(not any(k.startswith("_") for k in p.get("career",{})) for p in players)
+              for p in players:
+                  assert p["year"]==year and p["league"]=="NFL"
+                  assert p["name"] and p["team"] and p["position"]
+                  assert p["career"] is not None
+                  assert p["career_status"]
+                  if year>=2024:assert p["rating"] is None
+                  if p["rating"]:
+                      r=p["rating"]
+                      assert 0<=r["quality"]<=100
+                      assert 0<=r["value"]<=100
+                      assert r["model_version"]=="nfl-draft-v1"
+                      if r["grade"]:graded+=1
+              total+=len(players)
+          assert total==6901,(total,graded)
+          assert graded>=5500,graded
+          site=pathlib.Path("draft-reports/index.html").read_text()
+          assert "NFL v1" in site
+          assert "player-dialog" in site and 'id="year-filter"' in site
+          print(f"Validated {total} NFL draft picks across 27 drafts, {graded} grades.")
+          PY
