@@ -5,3 +5,9 @@
 @media(prefers-reduced-motion:no-preference){.tab,.brand,.hero-pill{transition:color .15s,background .15s}}
 
 .insight-filters{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+
+.history-section{border:1px solid #e1e9ec;border-radius:12px;overflow:hidden;margin-top:31px}
+.history-heading{padding:23px 24px 17px;background:#fbfdfd;border-bottom:1px solid #e7eeee}
+.history-heading h3{font-size:20px;letter-spacing:-.5px;margin:8px 0 5px}
+.history-heading p{margin:0;color:#7b8c93;font-size:12px;line-height:1.7}
+.history-footnote{padding:14px 18px;border-top:1px solid #e9eeee;color:#86979c;font-size:11px;line-height:1.7;background:#fcfdfd}

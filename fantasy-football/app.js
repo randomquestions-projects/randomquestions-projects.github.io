@@ -3,6 +3,7 @@ const SITES=["ESPN","Sleeper","CBS","NFL","RTSports","Fantrax","Yahoo"];
 const SITE_SHORT={"RTSports":"RTS","Fantrax":"FAN"};
 const YEARS=[2026,2025,2024,2023,2022,2021,2020,2019,2018,2017,2016,2015];
 const store=new Map();
+let historicalReady=false,historicalLoading=false;
 const state={year:2026,tab:"board",pos:"ALL",team:"ALL",search:"",gap:"raw",boardMetric:"ppr",sort:"avg_adp",asc:true,accuracyMetric:"ppr",accuracyBasis:"value",insightMetric:"ppr",insightBasis:"value"};
 const $=id=>document.getElementById(id);
 const fmt=new Intl.NumberFormat("en-US",{maximumFractionDigits:1});
@@ -20,6 +21,7 @@ const validData=d=>d&&d.year===state.year&&Array.isArray(d.players)&&d.players.l
 function rankCols(){
   const items=[{k:"name",h:"Player"},{k:"avg_adp",h:"Avg. ADP"}];
   for(const k of SITES)items.push({k:"adp_"+k,h:SITE_SHORT[k]||k});
+  items.push({k:"fp_consensus",h:"FP Composite"});
   items.push({k:"std_rank",h:"Actual STD"},{k:"ppr_rank",h:"Actual PPR"},
              {k:"delta_std",h:"Δ STD"},{k:"delta_ppr",h:"Δ PPR"});
   return items;
@@ -27,6 +29,7 @@ function rankCols(){
 function sortvalue(p,k){
   if(k==="name")return p.name.toLowerCase();
   if(k==="avg_adp")return p.avg_adp;
+  if(k==="fp_consensus")return p.fp_consensus;
   if(k.startsWith("adp_"))return p.adp?.[k.slice(4)];
   if(k.endsWith("_rank"))return outcome(p,k.startsWith("ppr")?"ppr":"std",state.gap);
   if(k.startsWith("delta_"))return gap(p,k.endsWith("ppr")?"ppr":"std",state.gap);
@@ -78,6 +81,7 @@ function renderBoard(d){
     const name='<td><div class="player-cell"><span class="position-icon '+esc(p.pos.toLowerCase())+'">'+esc(p.pos)+'</span><div class="player-names"><span class="player-name">'+esc(p.name)+'</span><span class="player-meta">'+esc(p.team||"Team unknown")+' · '+esc(p.pos)+'</span></div></div></td>';
     const cells=['<td class="adp-cell rank-primary">'+val(p.avg_adp)+'</td>',
       ...SITES.map(s=>'<td class="'+(p.adp?.[s]==null?"empty-cell":"adp-cell")+'">'+val(p.adp?.[s])+'</td>'),
+      '<td title="FantasyPros archived composite, not an additional independent ADP source" class="'+(p.fp_consensus==null?"empty-cell":"adp-cell")+'">'+val(p.fp_consensus)+'</td>',
       '<td class="rank-primary">'+(p.stats?"#"+val(outcome(p,"std",state.gap)):"—")+'</td>',
       '<td class="rank-primary">'+(p.stats?"#"+val(outcome(p,"ppr",state.gap)):"—")+'</td>',
       ...["std","ppr"].map(m=>{
@@ -86,9 +90,9 @@ function renderBoard(d){
       })];
     return '<tr class="'+esc(cls)+'">'+name+cells.join("")+"</tr>";
   }).join("");
-  if(!rows.length)$("rank-body").innerHTML='<tr><td colspan="13" class="no-data">No players match these filters.</td></tr>';
+  if(!rows.length)$("rank-body").innerHTML='<tr><td colspan="14" class="no-data">No players match these filters.</td></tr>';
   $("row-count").textContent=rows.length+" of "+d.players.length+" players";
-  $("board-summary").textContent="Sorted by "+columns.find(c=>c.k===state.sort)?.h+" "+(state.asc?"↑":"↓");
+  $("board-summary").textContent="Sorted by "+(columns.find(c=>c.k===state.sort)?.h||"ADP")+" "+(state.asc?"↑":"↓");
 }
 function compareSites(d,m,basis){
   const candidates=SITES.filter(s=>d.players.filter(p=>p.stats&&p.avg_adp<=150&&isNum(p.adp?.[s])).length>=30);
@@ -128,6 +132,51 @@ function insightList(rows,m,type,basis){
       '<div><div class="insight-gap '+(type==="good"?"good":"bad")+'">'+sign(g)+'</div><div class="insight-gap-sub">places</div></div></div>';
   }).join("");
 }
+
+async function ensureHistorical(){
+  if(historicalReady||historicalLoading)return;
+  historicalLoading=true;
+  $("historical-body").innerHTML='<tr><td colspan="5" class="no-data">Loading 2015–2025 season comparisons…</td></tr>';
+  try {
+    const seasons=YEARS.filter(y=>y<=2025);
+    await Promise.all(seasons.map(async y=>{
+      if(store.has(y))return;
+      const r=await fetch("./data/"+y+".json",{cache:"no-cache"});
+      if(!r.ok)throw new Error("Historical season "+y+" unavailable");
+      const d=await r.json();
+      if(d.year!==y||!Array.isArray(d.players)||d.players.length<100)throw new Error("Invalid "+y+" historical data");
+      store.set(y,d);
+    }));
+    const acc=new Map();
+    let useful=0;
+    for(const y of seasons){
+      const d=store.get(y);
+      const {sites,cohort}=compareSites(d,"ppr","value");
+      const annual=sites.filter(r=>SITES.includes(r.site));
+      if(annual.length<2||cohort.length<25)continue;
+      useful++;
+      const peer=annual.reduce((s,r)=>s+r.mae,0)/annual.length;
+      const best=Math.min(...annual.map(r=>r.mae));
+      for(const r of annual){
+        if(!acc.has(r.site))acc.set(r.site,{site:r.site,years:0,diff:0,mae:0,wins:0});
+        const x=acc.get(r.site);
+        x.years++;x.diff+=r.mae-peer;x.mae+=r.mae;x.wins+=r.mae===best?1:0;
+      }
+    }
+    const all=[...acc.values()].filter(r=>r.years>=2).map(r=>({...r,adv:r.diff/r.years,mae:r.mae/r.years})).sort((a,b)=>a.adv-b.adv);
+    $("historical-body").innerHTML=all.map((r,i)=>'<tr class="'+(i===0?"leading":"")+'"><td class="site-label">'+esc(r.site)+'</td>'+
+      '<td>'+val(r.years)+'</td><td>'+sign(Math.round(r.adv*10)/10)+'</td><td>'+val(Math.round(r.mae*10)/10)+'</td><td>'+val(r.wins)+'</td></tr>').join("")||
+      '<tr><td colspan="5" class="no-data">Insufficient historical platforms for a multi-year leaderboard.</td></tr>';
+    $("history-summary").textContent=all.length?
+      "Across "+useful+" eligible historical seasons, "+all[0].site+" had the lowest average error relative to its same-year peers ("+sign(Math.round(all[0].adv*10)/10)+" picks). Each site is only evaluated in years with overlapping sources.":
+      "Not enough overlapping historical source data to measure cross-season performance.";
+    historicalReady=true;
+  }catch(err){
+    $("historical-body").innerHTML='<tr><td colspan="5" class="no-data">Historical comparison temporarily unavailable.</td></tr>';
+    $("history-summary").textContent=err.message||"Unable to load archived annual data.";
+  }finally{historicalLoading=false}
+}
+
 function renderInsights(d){
   const m=state.insightMetric,basis=state.insightBasis;
   const eligible=d.players.filter(p=>p.avg_adp<=180&&p.stats&&isNum(outcome(p,m,basis)));
@@ -148,7 +197,7 @@ function renderSources(d){
   const adplink=cleanLink(src.url),actual=cleanLink(o.url);
   $("sources").innerHTML='<div class="source-title">DATA & METHODOLOGY · VERIFIABLE SOURCES</div>'+
     '<p><strong>Preseason ADP:</strong> '+esc(src.provider||"Archived multi-source ADP")+
-    ' · <a href="'+esc(adplink)+'" target="_blank" rel="noopener noreferrer">Archive provenance ↗</a>. Only available platform observations contribute to the arithmetic mean; no site values are invented. Historical snapshot dates before 2025 have not all been independently verified. Team labels are reconciled against season stats where available.</p>'+
+    ' · <a href="'+esc(adplink)+'" target="_blank" rel="noopener noreferrer">Archive provenance ↗</a>. Only available platform observations contribute to the arithmetic mean; no site values are invented. FP Composite is the archived FantasyPros aggregate shown separately, never double-counted as a platform in the average. Historical snapshot dates before 2025 have not all been independently verified. Team labels are reconciled against season stats where available.</p>'+
     '<p><strong>Actual finishes:</strong> <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noopener noreferrer">nflverse NFL player data ↗</a>'+
     ' · '+(actual!=="#"?'<a href="'+esc(actual)+'" target="_blank" rel="noopener noreferrer">Season-specific regular-season CSV ↗</a> · ':"")+
     'Regular-season standard (0 PPR) and full PPR total points, NFL fantasy scoring. '+esc(d.season_status==="IN_PROGRESS"?"2026 actuals reflect the current available season-to-date data.":"Historical seasons use final outcomes.")+
@@ -189,6 +238,7 @@ function selectTab(tab){
     const button=$("tab-"+x),panel=$("panel-"+x);
     button.classList.toggle("active",active);button.setAttribute("aria-selected",String(active));panel.hidden=!active;
   }
+  if(tab==="sites"&&store.has(state.year))void ensureHistorical();
 }
 function init(){
   $("year").addEventListener("change",e=>load(+e.target.value));
