@@ -140,10 +140,34 @@
       }
       if(!first.childElementCount) first.appendChild(safeText('p','detail-empty','Career statistics not available'));
       const awards=career.awards || {};
-      if(awards.first_team_all_pro !== null && awards.first_team_all_pro !== undefined)
-        detailLine(second,'First-team All-Pro',String(awards.first_team_all_pro));
-      if(awards.pro_bowls !== null && awards.pro_bowls !== undefined)
-        detailLine(second,'Pro Bowl selections',String(awards.pro_bowls));
+      const hasHonorsV2 = typeof awards.total_all_pro === 'number';
+      const awardYears = awards.seasons || {};
+      const accoladeLine = (key, label, seasonKey, always=false) => {
+        const value=awards[key];
+        if(typeof value !== 'number' || (!always && value===0))return;
+        const years=Array.isArray(awardYears[seasonKey]) ? awardYears[seasonKey] : [];
+        const shown=String(value)+(years.length ? ' ('+years.join(', ')+')' : '');
+        detailLine(second,label,shown);
+      };
+      if(hasHonorsV2) {
+        accoladeLine('mvp','NFL MVP','mvp');
+        accoladeLine('opoy','Offensive Player of the Year','opoy');
+        accoladeLine('dpoy','Defensive Player of the Year','dpoy');
+        accoladeLine('super_bowl_titles','Super Bowl champion roster*','super_bowl_seasons');
+        accoladeLine('first_team_all_pro','AP first-team All-Pro','all_pro_first_seasons',true);
+        accoladeLine('second_team_all_pro','AP second-team All-Pro','all_pro_second_seasons',true);
+        accoladeLine('total_all_pro','Total AP All-Pro seasons',null,true);
+        accoladeLine('pro_bowls','Pro Bowl selections',null,true);
+        if(awards.super_bowl_titles > 0) {
+          second.appendChild(safeText('p','season-disclaimer',
+            '* Counted by season roster membership with the champion, not independently verified Super Bowl game appearances or individual rings.'));
+        }
+      } else {
+        if(awards.first_team_all_pro !== null && awards.first_team_all_pro !== undefined)
+          detailLine(second,'First-team All-Pro',String(awards.first_team_all_pro));
+        if(awards.pro_bowls !== null && awards.pro_bowls !== undefined)
+          detailLine(second,'Pro Bowl selections',String(awards.pro_bowls));
+      }
       if(awards.hall_of_fame) detailLine(second,'Pro Football Hall of Fame','Inducted');
       if(!second.childElementCount)second.appendChild(safeText('p','detail-empty','Verified accolades unavailable'));
       const seasonal = Array.isArray(p.seasonal) ? p.seasonal : [];
