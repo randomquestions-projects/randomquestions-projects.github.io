@@ -51,5 +51,16 @@ window.RQ_PROJECTS = [
     searchKeywords: ['apartment', 'Brookline', 'Coolidge Corner', 'Boston', 'rental', 'housing', 'AI', 'preferences', 'recommendation', 'map'],
     url: 'https://randomquestions-projects.github.io/apartment-finder/',
     theme: 'default'
+  },
+  {
+    id: 'draft-reports',
+    title: 'Draft Reports',
+    shortName: 'DR',
+    domain: 'NFL & NBA DRAFT ANALYTICS',
+    description: 'Every pick tells a story. Explore verified NFL and NBA draft classes, player profiles, and a growing framework for career quality and draft value.',
+    categories: ['NFL', 'NBA'],
+    searchKeywords: ['draft', 'football', 'basketball', 'draft picks', 'player grades', 'career quality', 'draft value', 'steals', 'busts'],
+    url: 'https://randomquestions-projects.github.io/draft-reports/',
+    theme: 'football'
   }
 ];
