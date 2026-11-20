@@ -3,7 +3,7 @@
   const $ = (id) => document.getElementById(id);
   const sourceLinks = {
     NFL: 'https://www.profootballhof.com/football-history/nfl-draft-history/1960/2020',
-    NBA: 'https://www.nba.com/news/2020-nba-draft-results-picks-1-60'
+    NBA: 'https://www.nba.com/draft/history'
   };
   const state = { league: 'NFL', year: 2020, round: 1, query: '', sort: 'pick' };
   let picks = [];
@@ -21,9 +21,7 @@
 
   function populateYears() {
     $('year-filter').replaceChildren();
-    const availableYears = state.league === 'NFL'
-      ? Array.from({length:27},(_,i)=>2026-i)
-      : [2020];
+    const availableYears = Array.from({length:27},(_,i)=>2026-i);
     if (!availableYears.includes(state.year)) state.year = 2020;
     for (const year of availableYears) {
       const opt = document.createElement('option');
@@ -74,7 +72,7 @@
     cell(tr, safeText('span', 'pick-number', '#' + String(p.overall).padStart(2, '0')));
     const player = document.createElement('td');
     player.appendChild(safeText('div', 'player-name', p.name));
-    player.appendChild(safeText('div', 'player-detail', p.position ? p.position + (p.college ? ' · ' + p.college : '') : '2020 draft selection'));
+    player.appendChild(safeText('div', 'player-detail', p.position ? p.position + (p.college ? ' · ' + p.college : '') : 'Draft selection'));
     tr.appendChild(player);
     cell(tr, safeText('span', 'team-name', p.team));
     const quality = p.rating && typeof p.rating.quality === 'number' ? p.rating.quality.toFixed(1) : null;
@@ -92,6 +90,81 @@
       }
     });
     return tr;
+  }
+
+  function renderNBAProfile(p, career, first, second, detailLine) {
+    const addStat=(label,key,digits=0)=>{
+      const value=career[key];
+      if(value===null || value===undefined || !Number.isFinite(Number(value)))return;
+      detailLine(first,label,Number(value).toLocaleString(undefined,{
+        minimumFractionDigits:digits,maximumFractionDigits:digits
+      }));
+    };
+    addStat('NBA games played','games');
+    if(career.games>0){
+      addStat('Games started','games_started');
+      addStat('Career minutes','minutes');
+      addStat('Career points','points');
+      addStat('Points per game','points_per_game',1);
+      addStat('Career rebounds','rebounds');
+      addStat('Rebounds per game','rebounds_per_game',1);
+      addStat('Career assists','assists');
+      addStat('Assists per game','assists_per_game',1);
+      addStat('Career steals','steals');
+      addStat('Career blocks','blocks');
+      addStat('Win Shares','win_shares',1);
+      addStat('Win Shares per 48','ws_per_48',3);
+      addStat('Value Over Replacement (VORP)','vorp',1);
+      addStat('Box Plus/Minus (BPM)','bpm',1);
+    }
+    if(p.year>=2024)first.appendChild(safeText('p','season-disclaimer',
+      'Recent class: career outcomes are incomplete. The 2026–27 NBA season is in progress.'));
+    if(career.games===0 && p.year<2024)first.appendChild(
+      safeText('p','season-disclaimer','No verified NBA regular-season appearances.'));
+    const awards=career.awards||{},years=awards.seasons||{};
+    const labels=[
+      ['mvp','NBA Most Valuable Player'],
+      ['finals_mvp','NBA Finals MVP'],
+      ['dpoy','Defensive Player of the Year'],
+      ['roy','Rookie of the Year'],
+      ['all_nba_first','All-NBA First Team'],
+      ['all_nba_second','All-NBA Second Team'],
+      ['all_nba_third','All-NBA Third Team'],
+      ['all_nba_total','Total All-NBA selections'],
+      ['all_defense_first','All-Defensive First Team'],
+      ['all_defense_second','All-Defensive Second Team'],
+      ['all_defense_total','Total All-Defensive selections'],
+      ['all_star','All-Star selections'],
+      ['championship_roster_seasons','NBA champion-team regular-season stints*']
+    ];
+    for(const [key,label] of labels) {
+      const v=awards[key];
+      if(typeof v!=='number')continue;
+      if(v===0 && !['all_nba_total','all_defense_total','all_star'].includes(key))continue;
+      const ys=Array.isArray(years[key])?years[key]:[];
+      detailLine(second,label,String(v)+(ys.length?' ('+ys.join(', ')+')':''));
+    }
+    if(awards.championship_roster_seasons>0)
+      second.appendChild(safeText('p','season-disclaimer',
+      '* Regular-season appearance for the eventual champion team; not verified ring or NBA Finals participation.'));
+    second.appendChild(safeText('p','season-disclaimer',
+      'All-Defensive team history before 2016 is not included in this version. Zero does not mean no selection.'));
+    const section=document.querySelector('.profile-columns section:first-child');
+    let seasonContainer=document.getElementById('season-summary');
+    if(!seasonContainer) {
+      seasonContainer=safeText('div','season-summary','');
+      seasonContainer.id='season-summary';section.appendChild(seasonContainer);
+    }
+    seasonContainer.replaceChildren();
+    const seasonal=Array.isArray(p.seasonal)?p.seasonal:[];
+    if(seasonal.length){
+      seasonContainer.appendChild(safeText('h4','season-title','NBA seasons'));
+      for(const season of seasonal){
+        seasonContainer.appendChild(safeText('span','season-chip',
+          String(season.year)+' · '+(season.team||'NBA')+
+          ' ('+String(season.games||0)+' GP)'));
+      }
+    }
   }
   function showProfile(p) {
     selectedRow = document.activeElement;
@@ -115,6 +188,9 @@
       parent.appendChild(line);
     }
     if (career) {
+      if(p.league === 'NBA') {
+        renderNBAProfile(p,career,first,second,detailLine);
+      } else {
       if (career.games !== null) detailLine(first,'NFL games',String(career.games));
       if (career.weighted_av !== null) detailLine(first,'Weighted career AV',String(career.weighted_av));
       const group = p.position_group || '';
@@ -187,16 +263,17 @@
         }
         if(seasonal.some(y=>y.partial))seasonContainer.appendChild(safeText('p','season-disclaimer','* 2026 season in progress'));
       }
+      }
     } else {
-      first.appendChild(safeText('p','detail-empty','NBA career data will follow the NFL research release.'));
-      second.appendChild(safeText('p','detail-empty','Verified honors not yet imported.'));
+      first.appendChild(safeText('p','detail-empty','Career data not yet available.'));
+      second.appendChild(safeText('p','detail-empty','Honors not yet available.'));
       const seasonContainer=document.getElementById('season-summary');
       if(seasonContainer)seasonContainer.replaceChildren();
     }
     const sourceNote=document.querySelector('.profile-source > span:nth-child(2)');
     if(sourceNote)sourceNote.textContent = career ?
-      ('Career scoring ' + (p.rating ? (p.rating.maturity === 'final' ? 'established-career snapshot' : 'provisional') : 'pending')+
-       ' · Source: nflverse · Model '+(p.rating ? p.rating.model_version : 'not assigned')) :
+      ('Career scoring ' + (p.rating ? (p.rating.maturity === 'final' ? 'established-career snapshot' : 'provisional') : 'too early to grade')+
+       ' · Source: '+(p.league==='NBA'?'NBA Stats / Basketball-Reference':'nflverse')+' · Model '+(p.rating ? p.rating.model_version : 'not assigned')) :
       'Draft selection verified · career measurements pending';
 
     if (!$('player-dialog').open) $('player-dialog').showModal();
@@ -210,7 +287,7 @@
     $('class-heading').textContent = subtitle + ' — Round ' + state.round;
     $('coverage-note').textContent = loaded ?
       (state.league === 'NFL' ? 'Career performance, historical expectations and draft value · 2026 season partial · Source: nflverse' :
-        'Original NBA draft selections verified · career scores not yet available.') :
+        'NBA career production, impact metrics, honors and draft value · 2026–27 season in progress.') :
       (dataUnavailable ? 'Unable to load this draft class.' : 'Draft selections not yet available for this year and round.');
     $('count-picks').textContent = String(list.length);
     $('count-rated').textContent = String(list.filter((p) => p.rating && typeof p.rating.quality === 'number' && p.rating.grade).length);
@@ -224,7 +301,7 @@
       $('empty-title').textContent = loaded ? 'No matching players.' : 'This draft class is on the way.';
       $('empty-message').textContent = loaded ? 'Try a different player or team name.' :
         (dataUnavailable ? 'The historical draft data for this class could not be loaded.' :
-        'Historical draft selections for this league, year or round have not been imported. NFL 2000–2026 and NBA 2020 Round 1 are available.');
+        'NFL and NBA 2000–2026 draft classes are published. The selected data could not be loaded.');
       $('empty-reset').textContent = loaded ? 'Clear search ↗' : 'View available draft ↗';
     }
     for (const league of ['NFL', 'NBA']) {
@@ -299,23 +376,18 @@
     $('data-state').textContent = 'Loading verified draft records…';
     render();
     try {
-      const url = league === 'NFL' && year >= 2000 && year <= 2026 ?
-        './data/nfl/' + year + '.json' : './data/draft-board.json';
+      const url = './data/' + league.toLowerCase() + '/' + year + '.json';
       const response = await fetch(url,{cache:'no-cache'});
       if(!response.ok)throw new Error('HTTP '+response.status);
       const data = await response.json();
       if(token !== latestLoad)return;
-      if(league === 'NFL' && year >= 2000 && year <= 2026) {
-        if(data.schema_version !== 2 || data.league !== 'NFL' || data.year !== year ||
-            !Array.isArray(data.picks) || data.picks.length < 200)
-          throw new Error('Invalid NFL export');
-        picks = data.picks;
-        $('data-state').textContent = 'NFL 2000–2026 · career data & grades';
-      } else {
-        if(data.schema_version !== 1 || !Array.isArray(data.picks))throw new Error('Invalid starter board');
-        picks = data.picks.filter(p => p.league === league && p.year === year);
-        $('data-state').textContent = league === 'NBA' ? 'NBA career model coming next' : 'NFL 2000–2026 supported';
-      }
+      const expectedMinimum = league === 'NFL' ? 200 : 56;
+      if(data.schema_version !== 2 || data.league !== league || data.year !== year ||
+          !Array.isArray(data.picks) || data.picks.length < expectedMinimum ||
+          data.picks.some((p,i)=>p.league !== league || p.year !== year || p.overall !== i+1))
+        throw new Error('Invalid '+league+' export');
+      picks = data.picks;
+      $('data-state').textContent = league+' 2000–2026 · career data & grades';
     } catch(err) {
       if(token !== latestLoad)return;
       console.error('Draft data not available',err);
