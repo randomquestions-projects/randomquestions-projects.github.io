@@ -148,7 +148,7 @@
       second.appendChild(safeText('p','season-disclaimer',
       '* Regular-season appearance for the eventual champion team; not verified ring or NBA Finals participation.'));
     second.appendChild(safeText('p','season-disclaimer',
-      'All-Defensive team history before 2016 is not included in this version. Zero does not mean no selection.'));
+      'All-Defensive selections include 2000–2026 first and second teams, including tied selections.'));
     const section=document.querySelector('.profile-columns section:first-child');
     let seasonContainer=document.getElementById('season-summary');
     if(!seasonContainer) {
