@@ -8,3 +8,14 @@
 @media(max-width:990px){.site-wrap{padding:0 32px}.filters{grid-template-columns:1fr 1fr}.filter-search{grid-column:1/2}.hero{padding:35px}.hero h1{font-size:61px}.class-summary{align-items:start}.class-stats{gap:14px}.class-stats>div{padding-left:12px}.class-stats span{white-space:normal}}
 @media(max-width:690px){.site-wrap{padding:0 18px}.site-header{height:76px}.site-header-right{gap:10px}.product-tag{font-size:9px;letter-spacing:1px}.back-link{display:none}.hero{margin:18px 0 65px;padding:30px 24px 18px;min-height:auto}.hero-layout{grid-template-columns:1fr}.hero h1{font-size:clamp(43px,11vw,68px);margin:32px 0 14px}.hero p{font-size:13px;line-height:1.75}.hero-index{display:none}.hero-footer{gap:12px;margin-top:33px;font-size:8px}.hero-footer>span:last-child{text-align:right}.section-topline{flex-wrap:wrap}.board-heading{align-items:start;flex-direction:column;gap:21px}.board-heading h2{font-size:40px}.league-tabs{width:100%}.league-tab{flex:1}.filters{padding:15px;gap:14px;grid-template-columns:1fr 1fr}.filter-search{grid-column:1/-1}.filter-sort{grid-column:1/-1}.class-summary{display:block}.class-stats{margin-top:20px;gap:10px}.class-stats>div{flex:1}.class-stats strong{font-size:18px}.class-stats span{font-size:8px}.table-controls{padding:15px}.legend{display:none}.method-section{margin-top:58px;padding:42px 0 70px}.method-grid{grid-template-columns:1fr}.site-footer{flex-direction:column}.dialog-inner{padding:21px 20px}.profile-head{gap:12px}.profile-avatar{height:65px;width:65px;font-size:24px}.profile-columns{grid-template-columns:1fr}.profile-placeholder{min-height:135px}.profile-scores>div{padding:18px 14px}.profile-scores strong{font-size:30px}.profile-source{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+/* Published per-player NFL career statistics and accolades. */
+.profile-placeholder:has(.detail-line){padding:8px 18px;background:#fafdF9;border:1px solid #e2eae1}
+.detail-line{display:flex;align-items:baseline;justify-content:space-between;gap:15px;border-bottom:1px solid #e9efe9;padding:13px 0;min-width:0}
+.detail-line:last-child{border-bottom:0}
+.detail-key{font-size:11px;color:#6e8473}
+.detail-value{font-size:13px;font-weight:800;color:#263e2c;white-space:nowrap;font-variant-numeric:tabular-nums}
+.detail-empty{font-size:12px;line-height:1.7;color:#809384;margin:18px 0}
+.season-summary{margin-top:15px;padding:14px;border:1px solid #e1ebe1;border-radius:9px;background:#fbfdfb}
+.season-title{margin:0 0 12px;font-size:12px;letter-spacing:-.01em;color:#496d54}
+.season-chip{display:inline-block;font-size:10px;padding:6px 9px;background:#e9f1e8;color:#567760;border-radius:5px;margin:0 5px 7px 0}
+.season-disclaimer{font-size:10px;color:#879688;line-height:1.6}
