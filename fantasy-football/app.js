@@ -5,8 +5,9 @@ const platformADP=(p,site)=>site==="FantasyPros"?p.fp_consensus:p.adp?.[site];
 const SITE_SHORT={"RTSports":"RTS","Fantrax":"FAN"};
 const YEARS=[2026,2025,2024,2023,2022,2021,2020,2019,2018,2017,2016,2015];
 const store=new Map();
+const positionalRanks=new WeakMap();
 let historicalReady=false,historicalLoading=false;
-const state={year:2026,tab:"board",pos:"ALL",team:"ALL",search:"",gap:"raw",boardMetric:"ppr",sort:"avg_adp",asc:true,accuracyMetric:"ppr",accuracyBasis:"value",insightMetric:"ppr",insightBasis:"value"};
+const state={year:2026,tab:"board",pos:"ALL",team:"ALL",search:"",boardMetric:"ppr",sort:"avg_adp",asc:true,accuracyMetric:"ppr",accuracyBasis:"value",insightMetric:"ppr"};
 const $=id=>document.getElementById(id);
 const fmt=new Intl.NumberFormat("en-US",{maximumFractionDigits:1});
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -17,28 +18,51 @@ const stdMetric=m=>m==="std"?"Standard":"PPR";
 const cleanLink=u=>typeof u==="string"&&/^https:\/\/(github\.com|raw\.githubusercontent\.com|github\.io)\//.test(u)?u:"#";
 const current=()=>store.get(state.year);
 const outcome=(p,metric,basis="raw")=>p?.stats?.[metric+"_"+(basis==="value"?"value_rank":"rank")]??null;
-const gap=(p,metric,basis)=>{const rank=outcome(p,metric,basis);return rank==null?null:Math.round((p.avg_adp-rank)*10)/10;};
+// Overall ADP numbers are draft-pick positions, not positional rankings.
+// Rank the archived preseason player pool separately for QB, RB, WR, and TE.
+function buildPositionalRanks(d){
+  for(const pos of ["QB","RB","WR","TE"]){
+    const players=d.players.filter(p=>p.pos===pos&&isNum(p.avg_adp))
+      .sort((a,b)=>a.avg_adp-b.avg_adp||a.name.localeCompare(b.name));
+    let previous=null,rank=0;
+    for(let i=0;i<players.length;i++){
+      const p=players[i];
+      if(previous===null||p.avg_adp!==previous)rank=i+1;
+      positionalRanks.set(p,rank);
+      previous=p.avg_adp;
+    }
+  }
+}
+const posADP=p=>positionalRanks.get(p)??null;
+const posOutcome=(p,metric)=>p?.stats?.[metric+"_pos_rank"]??null;
+// A positive positional gap means a player finished ahead of the position-specific
+// market expectation. Both ranks refer to the same position and scoring format.
+const gap=(p,metric)=>{
+  const draft=posADP(p),finish=posOutcome(p,metric);
+  return isNum(draft)&&isNum(finish)?draft-finish:null;
+};
 const seasonStatus=d=>d?.season_status==="IN_PROGRESS"?"SEASON TO DATE":"FINAL SEASON";
 const validData=d=>d&&d.year===state.year&&Array.isArray(d.players)&&d.players.length>100;
 function rankCols(){
-  const items=[{k:"name",h:"Player"},{k:"avg_adp",h:"Avg. ADP"}];
+  const items=[{k:"name",h:"Player"},{k:"avg_adp",h:"Avg. ADP"},{k:"pos_adp",h:"Pos. ADP"}];
   for(const k of DISPLAY_SITES)items.push({k:"adp_"+k,h:SITE_SHORT[k]||k});
-  items.push({k:"std_rank",h:"Actual STD"},{k:"ppr_rank",h:"Actual PPR"},
+  items.push({k:"std_rank",h:"STD pos. finish"},{k:"ppr_rank",h:"PPR pos. finish"},
              {k:"delta_std",h:"Δ STD"},{k:"delta_ppr",h:"Δ PPR"});
   return items;
 }
 function sortvalue(p,k){
   if(k==="name")return p.name.toLowerCase();
   if(k==="avg_adp")return p.avg_adp;
+  if(k==="pos_adp")return posADP(p);
   if(k.startsWith("adp_"))return platformADP(p,k.slice(4));
-  if(k.endsWith("_rank"))return outcome(p,k.startsWith("ppr")?"ppr":"std",state.gap);
-  if(k.startsWith("delta_"))return gap(p,k.endsWith("ppr")?"ppr":"std",state.gap);
+  if(k.endsWith("_rank"))return posOutcome(p,k.startsWith("ppr")?"ppr":"std");
+  if(k.startsWith("delta_"))return gap(p,k.endsWith("ppr")?"ppr":"std");
   return null;
 }
 function colored(delta){
   if(!isNum(delta))return "";
-  if(delta>=6)return delta>=25?"row-good strong-row":"row-good";
-  if(delta<=-6)return delta<=-25?"row-bad strong-row":"row-bad";
+  if(delta>=2)return delta>=8?"row-good strong-row":"row-good";
+  if(delta<=-2)return delta<=-8?"row-bad strong-row":"row-bad";
   return "";
 }
 function populateTeams(d){
@@ -55,11 +79,11 @@ function renderStatus(d){
   tag.classList.toggle("provisional",d.season_status==="IN_PROGRESS");
   const matched=d.coverage?.matched??d.players.filter(p=>p.stats).length;
   const total=d.players.length;
-  const best=d.players.filter(p=>p.stats&&p.avg_adp<=180).sort((a,b)=>(gap(b,"ppr","value")??-99999)-(gap(a,"ppr","value")??-99999))[0];
+  const best=d.players.filter(p=>p.stats&&p.avg_adp<=180&&gap(p,"ppr")!=null).sort((a,b)=>gap(b,"ppr")-gap(a,"ppr"))[0];
   const stats=[["Players with ADP",val(total),"Season's archived preseason board"],
                ["Actuals matched",val(matched),total?Math.round(matched/total*100)+"% validated join coverage":"Not available"],
                ["ADP sources + benchmark",val(DISPLAY_SITES.filter(s=>d.players.some(p=>isNum(platformADP(p,s)))).length),"FantasyPros consensus is a benchmark"],
-               ["Top draft surprise",best?best.name:"—",best?"+"+val(gap(best,"ppr","value"))+" value-rank improvement":"Awaiting actual outcomes"]];
+               ["Top draft surprise",best?best.name:"—",best?"+"+val(gap(best,"ppr"))+" positional places vs. preseason ADP":"Awaiting actual outcomes"]];
   $("stat-row").innerHTML=stats.map(([label,n,note])=>'<div class="stat"><div class="stat-label">'+esc(label)+'</div><div class="stat-number" title="'+esc(n)+'">'+esc(n)+'</div><div class="stat-note">'+esc(note)+'</div></div>').join("");
 }
 function renderBoard(d){
@@ -77,19 +101,20 @@ function renderBoard(d){
   });
   const colorMetric=state.boardMetric;
   $("rank-body").innerHTML=rows.map(p=>{
-    const dlt=gap(p,colorMetric,state.gap),cls=colored(dlt);
+    const dlt=gap(p,colorMetric),cls=colored(dlt);
     const name='<td><div class="player-cell"><span class="position-icon '+esc(p.pos.toLowerCase())+'">'+esc(p.pos)+'</span><div class="player-names"><span class="player-name">'+esc(p.name)+'</span><span class="player-meta">'+esc(p.team||"Team unknown")+' · '+esc(p.pos)+'</span></div></div></td>';
     const cells=['<td class="adp-cell rank-primary">'+val(p.avg_adp)+'</td>',
+      '<td class="rank-primary">'+(posADP(p)==null?"—":esc(p.pos)+val(posADP(p)))+'</td>',
       ...DISPLAY_SITES.map(s=>'<td title="'+(s==="FantasyPros"?"FantasyPros consensus benchmark — excluded from average ADP":esc(s)+" preseason ADP")+'" class="'+(platformADP(p,s)==null?"empty-cell":"adp-cell")+'">'+val(platformADP(p,s))+'</td>'),
-      '<td class="rank-primary">'+(p.stats?"#"+val(outcome(p,"std",state.gap)):"—")+'</td>',
-      '<td class="rank-primary">'+(p.stats?"#"+val(outcome(p,"ppr",state.gap)):"—")+'</td>',
+      '<td class="rank-primary">'+(posOutcome(p,"std")==null?"—":esc(p.pos)+val(posOutcome(p,"std")))+'</td>',
+      '<td class="rank-primary">'+(posOutcome(p,"ppr")==null?"—":esc(p.pos)+val(posOutcome(p,"ppr")))+'</td>',
       ...["std","ppr"].map(m=>{
-        const g=gap(p,m,state.gap);
+        const g=gap(p,m);
         return '<td class="delta-val '+(g==null?"empty-cell":g>0?"positive":g<0?"negative":"")+'">'+sign(g)+'</td>';
       })];
     return '<tr class="'+esc(cls)+'">'+name+cells.join("")+"</tr>";
   }).join("");
-  if(!rows.length)$("rank-body").innerHTML='<tr><td colspan="14" class="no-data">No players match these filters.</td></tr>';
+  if(!rows.length)$("rank-body").innerHTML='<tr><td colspan="15" class="no-data">No players match these filters.</td></tr>';
   $("row-count").textContent=rows.length+" of "+d.players.length+" players";
   $("board-summary").textContent="Sorted by "+(columns.find(c=>c.k===state.sort)?.h||"ADP")+" "+(state.asc?"↑":"↓");
 }
@@ -122,12 +147,12 @@ function renderAccuracy(d){
     'A fair platform leaderboard needs at least two sites with a sufficient shared player cohort. '+esc(reason||"");
   $("accuracy-explanation").textContent="Every ranked site is evaluated on the exact same "+cohort.length+" players (top 150 by consensus ADP, where every eligible source has a value). Mean absolute error measures distance to "+stdMetric(m)+" "+(basis==="value"?"replacement-adjusted value rank":"all-position points rank")+". Lower is better; the signed gap is ADP minus actual rank. Consensus is a benchmark, not a platform.";
 }
-function insightList(rows,m,type,basis){
+function insightList(rows,m,type){
   if(!rows.length)return '<div class="no-data">No verified player results yet.</div>';
   return rows.map((p,i)=>{
-    const g=gap(p,m,basis);
+    const g=gap(p,m);
     return '<div class="insight-player"><span class="insight-num">'+String(i+1).padStart(2,"0")+'</span>'+
-      '<div><div class="insight-name">'+esc(p.name)+'</div><div class="insight-extra">'+esc(p.team||"")+' · '+esc(p.pos)+' · ADP '+val(p.avg_adp)+' → finish #'+val(outcome(p,m,basis))+'</div></div>'+
+      '<div><div class="insight-name">'+esc(p.name)+'</div><div class="insight-extra">'+esc(p.team||"")+' · '+esc(p.pos)+' · '+esc(p.pos)+val(posADP(p))+' ADP → '+esc(p.pos)+val(posOutcome(p,m))+' finish</div></div>'+
       '<div><div class="insight-gap '+(type==="good"?"good":"bad")+'">'+sign(g)+'</div><div class="insight-gap-sub">places</div></div></div>';
   }).join("");
 }
@@ -177,18 +202,18 @@ async function ensureHistorical(){
 }
 
 function renderInsights(d){
-  const m=state.insightMetric,basis=state.insightBasis;
-  const eligible=d.players.filter(p=>p.avg_adp<=180&&p.stats&&isNum(outcome(p,m,basis)));
-  const good=[...eligible].sort((a,b)=>gap(b,m,basis)-gap(a,m,basis)).filter(p=>gap(p,m,basis)>0).slice(0,10);
-  const bad=[...eligible].sort((a,b)=>gap(a,m,basis)-gap(b,m,basis)).filter(p=>gap(p,m,basis)<0).slice(0,10);
-  $("steals-list").innerHTML=insightList(good,m,"good",basis);
-  $("busts-list").innerHTML=insightList(bad,m,"bad",basis);
-  const beat=eligible.filter(p=>gap(p,m,"raw")>0).length;
-  const missed=eligible.filter(p=>gap(p,m,"raw")<0).length;
+  const m=state.insightMetric;
+  const eligible=d.players.filter(p=>p.avg_adp<=180&&isNum(gap(p,m)));
+  const good=[...eligible].sort((a,b)=>gap(b,m)-gap(a,m)).filter(p=>gap(p,m)>0).slice(0,10);
+  const bad=[...eligible].sort((a,b)=>gap(a,m)-gap(b,m)).filter(p=>gap(p,m)<0).slice(0,10);
+  $("steals-list").innerHTML=insightList(good,m,"good");
+  $("busts-list").innerHTML=insightList(bad,m,"bad");
+  const beat=eligible.filter(p=>gap(p,m)>0).length;
+  const missed=eligible.filter(p=>gap(p,m)<0).length;
   const provisional=d.season_status==="IN_PROGRESS";
-  $("insight-intro").innerHTML='<strong>'+val(eligible.length)+' verifiable early-draft selections</strong> ('+stdMetric(m)+') · '+val(beat)+' above ADP, '+val(missed)+' below. '+
-     (provisional?'<strong>2026 is season-to-date.</strong> These are provisional results, not final bust or steal judgments.':'Finished regular-season results; the first 180 average ADP picks define the draft cohort.');
-  $("insight-footer").textContent="Selection rule: average ADP ≤180, a verified regular-season player match, ranked by average ADP minus "+stdMetric(m)+" "+(basis==="value"?"replacement-adjusted fantasy value rank":"overall fantasy-points rank")+". Missing or unmatched outcomes are never counted as busts. Rankings use season total points, so injuries and missed games matter. Switch the rank basis to see the unadjusted draft-to-finish gaps.";
+  $("insight-intro").innerHTML='<strong>'+val(eligible.length)+' verifiable early-draft selections</strong> ('+stdMetric(m)+') · '+val(beat)+' above positional ADP, '+val(missed)+' below. '+
+     (provisional?'<strong>2026 is season-to-date.</strong> These are provisional results, not final bust or steal judgments.':'Finished regular-season results; the first 180 average overall ADP picks define the draft cohort.');
+  $("insight-footer").textContent="Selection rule: overall average ADP ≤180, verified regular-season player match. We rank every archived preseason player within their position by average ADP, then subtract that player's actual "+stdMetric(m)+" positional finish rank. A positive positional-rank difference is a steal; a negative difference is a miss. Missing or unmatched outcomes are never counted as busts. Rankings use season total points, so injuries and missed games matter.";
 }
 function renderSources(d){
   const src=d.source||{},o=d.outcome_source||{};
@@ -204,7 +229,8 @@ function renderSources(d){
     ' · '+(actual!=="#"?'<a href="'+esc(actual)+'" target="_blank" rel="noopener noreferrer">Season-specific regular-season CSV ↗</a> · ':"")+
     'Regular-season standard (0 PPR) and full PPR total points, NFL fantasy scoring. '+esc(d.season_status==="IN_PROGRESS"?"2026 actuals reflect the current available season-to-date data.":"Historical seasons use final outcomes.")+
     ' Player matches: '+val(meta.matched)+' of '+val(meta.adp_players)+' archived ADP rows.</p>'+
-    '<p><strong>Interpretation:</strong> Δ = average ADP − actual finish rank. Positive is a draft bargain; negative is disappointing. The optional roster-adjusted rank uses replacement baselines for a 12-team, 1QB format (QB12 / RB30 / WR36 / TE12), ranking each player by fantasy points above their positional baseline. ADP varies in scoring format and market timing, so cross-site comparisons are descriptive. The site contains no generated player forecasts or filled-in missing data.</p>';
+    '<p><strong>Player rankings and steals/busts:</strong> Positional ADP is the rank of each QB, RB, WR or TE within that season’s archived preseason player pool, ordered by average overall ADP (equal ADPs share a rank). STD/PPR positional finish ranks use season-total fantasy points for that position. Δ = positional ADP rank − positional finish rank; positive means a player outperformed preseason expectations. Green/red row shading uses the selected STD or PPR positional gap: at least ±2 positions is shaded, at least ±8 is emphasized. The overall ADP and per-site ADP columns still show overall draft-pick numbers for context.</p>'+
+    '<p><strong>Site accuracy is a separate overall-pick analysis:</strong> It compares overall draft picks with either overall total-points ranks or 12-team, 1QB replacement-adjusted value ranks (QB12 / RB30 / WR36 / TE12). These are not the positional gaps used for the player board. ADP varies in scoring format and market timing; cross-site comparisons are descriptive. No missing source values or outcomes are invented.</p>';
 }
 function render(){
   const d=current();
@@ -226,6 +252,7 @@ async function load(year){
     }
     const d=store.get(year);
     $("loading").hidden=true;$("dashboard").hidden=false;
+    buildPositionalRanks(d);
     populateTeams(d);
     render();selectTab(state.tab);
   }catch(err){
@@ -248,12 +275,10 @@ function init(){
   $("position").addEventListener("change",e=>{state.pos=e.target.value;renderBoard(current())});
   $("team").addEventListener("change",e=>{state.team=e.target.value;renderBoard(current())});
   $("search").addEventListener("input",e=>{state.search=e.target.value;renderBoard(current())});
-  $("gap-basis").addEventListener("change",e=>{state.gap=e.target.value;renderBoard(current())});
   $("board-scoring").addEventListener("change",e=>{state.boardMetric=e.target.value;renderBoard(current())});
   $("accuracy-scoring").addEventListener("change",e=>{state.accuracyMetric=e.target.value;renderAccuracy(current())});
   $("accuracy-basis").addEventListener("change",e=>{state.accuracyBasis=e.target.value;renderAccuracy(current())});
   $("insight-scoring").addEventListener("change",e=>{state.insightMetric=e.target.value;renderInsights(current())});
-  $("insight-basis").addEventListener("change",e=>{state.insightBasis=e.target.value;renderInsights(current())});
   $("rank-head").addEventListener("click",e=>{
     const b=e.target.closest("button[data-sort]");
     if(!b)return;
