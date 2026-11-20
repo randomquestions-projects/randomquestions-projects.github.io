@@ -1,0 +1,48 @@
+{
+  "built_at": "2026-11-20T04:52:49.987764+00:00",
+  "years": {
+    "2020": {
+      "adp_players": 492,
+      "matched": 398,
+      "top120_matched": 113,
+      "top120_total": 115
+    },
+    "2021": {
+      "adp_players": 405,
+      "matched": 347,
+      "top120_matched": 107,
+      "top120_total": 110
+    },
+    "2022": {
+      "adp_players": 285,
+      "matched": 253,
+      "top120_matched": 112,
+      "top120_total": 112
+    },
+    "2023": {
+      "adp_players": 505,
+      "matched": 397,
+      "top120_matched": 108,
+      "top120_total": 108
+    },
+    "2024": {
+      "adp_players": 843,
+      "matched": 549,
+      "top120_matched": 114,
+      "top120_total": 114
+    },
+    "2025": {
+      "adp_players": 845,
+      "matched": 548,
+      "top120_matched": 111,
+      "top120_total": 113
+    },
+    "2026": {
+      "adp_players": 145,
+      "matched": 141,
+      "top120_matched": 111,
+      "top120_total": 112
+    }
+  },
+  "methodology_version": "1.0"
+}
