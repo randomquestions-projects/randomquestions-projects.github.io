@@ -92,7 +92,8 @@ jobs:
                   if p["rating"] is not None:
                       assert 0<=p["rating"]["quality"]<=100
                       assert 0<=p["rating"]["value"]<=100
-                      assert p["rating"]["model_version"]=="nba-draft-v1"
+                      assert p["rating"]["model_version"]=="nba-draft-v2"
+                      assert p["rating"]["grade_basis"] in ("career_quality","career_pace")
                       if p["rating"]["grade"]:graded+=1
               total+=len(players)
           assert total==1602,(total,graded)
