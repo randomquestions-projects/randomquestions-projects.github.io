@@ -8,6 +8,8 @@
   const state = { league: 'NFL', year: 2020, round: 1, query: '', sort: 'pick' };
   let picks = [];
   let selectedRow = null;
+  let latestLoad = 0;
+  let dataUnavailable = false;
 
   const safeText = (tag, className, value) => {
     const node = document.createElement(tag);
@@ -72,7 +74,7 @@
     cell(tr, safeText('span', 'team-name', p.team));
     const quality = p.rating && typeof p.rating.quality === 'number' ? p.rating.quality.toFixed(1) : null;
     const grade = p.rating && p.rating.grade ? p.rating.grade : null;
-    cell(tr, safeText('span', 'score-pending', quality === null ? 'Not rated' : quality));
+    cell(tr, safeText('span', 'score-pending', quality === null ? (p.career_status === 'too_early' ? 'Too early' : 'Not rated') : quality));
     cell(tr, safeText('span', 'grade-pending', grade || '—'));
     const btn = safeText('button', 'row-button', '↗');
     btn.type = 'button';
@@ -94,7 +96,80 @@
     $('profile-meta').textContent = 'Round ' + p.round + ' · Pick #' + p.overall + ' · ' + p.team + (p.position ? ' · ' + p.position : '');
     $('profile-quality').textContent = p.rating && typeof p.rating.quality === 'number' ? p.rating.quality.toFixed(1) : '—';
     $('profile-grade').textContent = p.rating && p.rating.grade ? p.rating.grade : '—';
-    $('profile-source-link').href = sourceLinks[p.league];
+    $('profile-source-link').href = p.league === 'NFL' ?
+      'https://github.com/nflverse/nflverse-data' : sourceLinks.NBA;
+    const career = p.career || null;
+    const first = document.querySelector('.profile-columns section:first-child .profile-placeholder');
+    const second = document.querySelector('.profile-columns section:last-child .profile-placeholder');
+    first.replaceChildren();
+    second.replaceChildren();
+    function detailLine(parent,label,value) {
+      const line = safeText('div','detail-line','');
+      line.appendChild(safeText('span','detail-key',label));
+      line.appendChild(safeText('strong','detail-value',value));
+      parent.appendChild(line);
+    }
+    if (career) {
+      if (career.games !== null) detailLine(first,'NFL games',String(career.games));
+      if (career.weighted_av !== null) detailLine(first,'Weighted career AV',String(career.weighted_av));
+      const group = p.position_group || '';
+      const allowedByGroup = {
+        QB:['passing_yards','passing_tds','passing_interceptions','rushing_yards'],
+        RB:['rushing_yards','rushing_tds','receiving_yards','receptions'],
+        WR:['receiving_yards','receiving_tds','receptions'],
+        TE:['receiving_yards','receiving_tds','receptions'],
+        DL:['def_sacks','def_tackles_solo','def_interceptions'],
+        LB:['def_tackles_solo','def_sacks','def_interceptions'],
+        DB:['def_interceptions','def_tackles_solo','def_sacks'],
+        ST:['fg_made','fg_att']
+      };
+      const statNames={passing_yards:'Passing yards',passing_tds:'Passing touchdowns',
+        passing_interceptions:'Interceptions thrown',rushing_yards:'Rushing yards',
+        rushing_tds:'Rushing touchdowns',receiving_yards:'Receiving yards',
+        receiving_tds:'Receiving touchdowns',receptions:'Receptions',
+        def_sacks:'Sacks',def_interceptions:'Defensive interceptions',
+        def_tackles_solo:'Solo tackles',fg_made:'Field goals made',fg_att:'Field goals attempted'};
+      for(const key of allowedByGroup[group] || []) {
+        if(career.stats && career.stats[key] !== null && career.stats[key] !== undefined)
+          detailLine(first,statNames[key],Number(career.stats[key]).toLocaleString());
+      }
+      if(!first.childElementCount) first.appendChild(safeText('p','detail-empty','Career statistics not available'));
+      const awards=career.awards || {};
+      if(awards.first_team_all_pro !== null && awards.first_team_all_pro !== undefined)
+        detailLine(second,'First-team All-Pro',String(awards.first_team_all_pro));
+      if(awards.pro_bowls !== null && awards.pro_bowls !== undefined)
+        detailLine(second,'Pro Bowl selections',String(awards.pro_bowls));
+      if(awards.hall_of_fame) detailLine(second,'Pro Football Hall of Fame','Inducted');
+      if(!second.childElementCount)second.appendChild(safeText('p','detail-empty','Verified accolades unavailable'));
+      const seasonal = Array.isArray(p.seasonal) ? p.seasonal : [];
+      const section=document.querySelector('.profile-columns section:first-child');
+      let seasonContainer = document.getElementById('season-summary');
+      if(!seasonContainer) {
+        seasonContainer=safeText('div','season-summary','');
+        seasonContainer.id='season-summary';
+        section.appendChild(seasonContainer);
+      }
+      seasonContainer.replaceChildren();
+      if(seasonal.length) {
+        seasonContainer.appendChild(safeText('h4','season-title','NFL seasons'));
+        for(const year of seasonal) {
+          seasonContainer.appendChild(safeText('span','season-chip',
+            String(year.year)+(year.partial?'*':'')+' · '+(year.team||'NFL')));
+        }
+        if(seasonal.some(y=>y.partial))seasonContainer.appendChild(safeText('p','season-disclaimer','* 2026 season in progress'));
+      }
+    } else {
+      first.appendChild(safeText('p','detail-empty','NBA career data will follow the NFL research release.'));
+      second.appendChild(safeText('p','detail-empty','Verified honors not yet imported.'));
+      const seasonContainer=document.getElementById('season-summary');
+      if(seasonContainer)seasonContainer.replaceChildren();
+    }
+    const sourceNote=document.querySelector('.profile-source > span:nth-child(2)');
+    if(sourceNote)sourceNote.textContent = career ?
+      ('Career scoring ' + (p.rating ? p.rating.maturity : 'pending')+
+       ' · Source: nflverse · Model '+(p.rating ? p.rating.model_version : 'not assigned')) :
+      'Draft selection verified · career measurements pending';
+
     if (!$('player-dialog').open) $('player-dialog').showModal();
   }
   function render() {
@@ -105,8 +180,9 @@
     $('class-kicker').textContent = state.year + ' / ' + state.league + ' / ROUND ' + state.round;
     $('class-heading').textContent = subtitle + ' — Round ' + state.round;
     $('coverage-note').textContent = loaded ?
-      'Original draft selections verified · career measurements and grades not yet available.' :
-      'Draft selections for this year and round have not been imported yet.';
+      (state.league === 'NFL' ? 'Career performance, historical expectations and draft value · 2026 season partial · Source: nflverse' :
+        'Original NBA draft selections verified · career scores not yet available.') :
+      (dataUnavailable ? 'Unable to load this draft class.' : 'Draft selections not yet available for this year and round.');
     $('count-picks').textContent = String(list.length);
     $('count-rated').textContent = String(list.filter((p) => p.rating && typeof p.rating.quality === 'number' && p.rating.grade).length);
     $('count-rounds').textContent = state.round + '/' + (state.league === 'NBA' ? 2 : 7);
@@ -118,7 +194,8 @@
     if (empty) {
       $('empty-title').textContent = loaded ? 'No matching players.' : 'This draft class is on the way.';
       $('empty-message').textContent = loaded ? 'Try a different player or team name.' :
-        'The historical pick list for this combination has not been imported. Choose 2020 / Round 1 to explore the verified starter board.';
+        (dataUnavailable ? 'The historical draft data for this class could not be loaded.' :
+        'Historical draft selections for this league, year or round have not been imported. NFL 2000–2026 and NBA 2020 Round 1 are available.');
       $('empty-reset').textContent = loaded ? 'Clear search ↗' : 'View available draft ↗';
     }
     for (const league of ['NFL', 'NBA']) {
@@ -143,7 +220,7 @@
     $('player-search').value = '';
     $('sort-filter').value = 'pick';
     populateRounds();
-    render();
+    loadDraft();
     if (focus) $('tab-' + league.toLowerCase()).focus();
   }
   function restoreState() {
@@ -166,7 +243,7 @@
         }
       });
     }
-    $('year-filter').addEventListener('change', (e) => { state.year = Number(e.target.value); render(); });
+    $('year-filter').addEventListener('change', (e) => { state.year = Number(e.target.value); loadDraft(); });
     $('round-filter').addEventListener('change', (e) => { state.round = Number(e.target.value); render(); });
     $('player-search').addEventListener('input', (e) => { state.query = e.target.value; render(); });
     $('sort-filter').addEventListener('change', (e) => { state.sort = e.target.value; render(); });
@@ -174,7 +251,7 @@
       if (picks.some((p) => p.league === state.league && p.year === state.year && p.round === state.round)) {
         state.query = ''; $('player-search').value = '';
       } else { state.year = 2020; state.round = 1; $('year-filter').value = '2020'; $('round-filter').value = '1'; }
-      render();
+      loadDraft();
     });
     $('close-dialog').addEventListener('click', () => $('player-dialog').close());
     $('player-dialog').addEventListener('click', (e) => {
@@ -183,6 +260,40 @@
     });
     $('player-dialog').addEventListener('close', () => { if (selectedRow && selectedRow.isConnected) selectedRow.focus(); });
   }
+  async function loadDraft() {
+    const token = ++latestLoad;
+    const league = state.league;
+    const year = state.year;
+    picks = [];
+    dataUnavailable = false;
+    $('data-state').textContent = 'Loading verified draft records…';
+    render();
+    try {
+      const url = league === 'NFL' && year >= 2000 && year <= 2026 ?
+        './data/nfl/' + year + '.json' : './data/draft-board.json';
+      const response = await fetch(url,{cache:'no-cache'});
+      if(!response.ok)throw new Error('HTTP '+response.status);
+      const data = await response.json();
+      if(token !== latestLoad)return;
+      if(league === 'NFL' && year >= 2000 && year <= 2026) {
+        if(data.schema_version !== 2 || data.league !== 'NFL' || data.year !== year ||
+            !Array.isArray(data.picks) || data.picks.length < 200)
+          throw new Error('Invalid NFL export');
+        picks = data.picks;
+        $('data-state').textContent = 'NFL 2000–2026 · career data & grades';
+      } else {
+        if(data.schema_version !== 1 || !Array.isArray(data.picks))throw new Error('Invalid starter board');
+        picks = data.picks.filter(p => p.league === league && p.year === year);
+        $('data-state').textContent = league === 'NBA' ? 'NBA career model coming next' : 'NFL 2000–2026 supported';
+      }
+    } catch(err) {
+      if(token !== latestLoad)return;
+      console.error('Draft data not available',err);
+      dataUnavailable=true;
+      $('data-state').textContent = 'Draft data unavailable for this selection';
+    }
+    if(token === latestLoad)render();
+  }
   async function main() {
     $('copyright-year').textContent = String(new Date().getFullYear());
     restoreState();
@@ -190,24 +301,7 @@
     $('year-filter').value = String(state.year);
     populateRounds();
     wireEvents();
-    try {
-      const response = await fetch('./data/draft-board.json', { cache: 'no-cache' });
-      if (!response.ok) throw new Error('Draft board HTTP ' + response.status);
-      const payload = await response.json();
-      if (!payload || payload.schema_version !== 1 || !Array.isArray(payload.picks)) throw new Error('Invalid draft board format');
-      picks = payload.picks.filter((p) => p && ['NFL','NBA'].includes(p.league) &&
-        Number.isInteger(p.year) && Number.isInteger(p.round) && Number.isInteger(p.overall) &&
-        typeof p.name === 'string' && typeof p.team === 'string');
-      render();
-    } catch (error) {
-      console.error('Draft board could not be loaded', error);
-      $('data-state').textContent = 'Data temporarily unavailable';
-      render();
-      $('coverage-note').textContent = 'Unable to load the draft data. Refresh this page or check back later.';
-      $('empty-title').textContent = 'Unable to load the draft board';
-      $('empty-message').textContent = 'The site interface is available, but the starter data file could not be retrieved.';
-      $('empty-reset').hidden = true;
-    }
+    await loadDraft();
   }
   main();
 })();
