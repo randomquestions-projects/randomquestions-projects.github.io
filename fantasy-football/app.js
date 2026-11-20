@@ -1,9 +1,9 @@
 "use strict";
 const SITES=["ESPN","Sleeper","CBS","NFL","RTSports","Fantrax","Yahoo"];
 const SITE_SHORT={"RTSports":"RTS","Fantrax":"FAN"};
-const YEARS=[2026,2025,2024,2023,2022,2021,2020];
+const YEARS=[2026,2025,2024,2023,2022,2021,2020,2019,2018,2017,2016,2015];
 const store=new Map();
-const state={year:2026,tab:"board",pos:"ALL",team:"ALL",search:"",gap:"raw",sort:"avg_adp",asc:true,accuracyMetric:"ppr",accuracyBasis:"value",insightMetric:"ppr"};
+const state={year:2026,tab:"board",pos:"ALL",team:"ALL",search:"",gap:"raw",boardMetric:"ppr",sort:"avg_adp",asc:true,accuracyMetric:"ppr",accuracyBasis:"value",insightMetric:"ppr",insightBasis:"value"};
 const $=id=>document.getElementById(id);
 const fmt=new Intl.NumberFormat("en-US",{maximumFractionDigits:1});
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -72,7 +72,7 @@ function renderBoard(d){
     if(typeof x==="string")return (asc?1:-1)*x.localeCompare(y);
     return (asc?1:-1)*(x-y)||a.avg_adp-b.avg_adp;
   });
-  const colorMetric=state.insightMetric;
+  const colorMetric=state.boardMetric;
   $("rank-body").innerHTML=rows.map(p=>{
     const dlt=gap(p,colorMetric,state.gap),cls=colored(dlt);
     const name='<td><div class="player-cell"><span class="position-icon '+esc(p.pos.toLowerCase())+'">'+esc(p.pos)+'</span><div class="player-names"><span class="player-name">'+esc(p.name)+'</span><span class="player-meta">'+esc(p.team||"Team unknown")+' · '+esc(p.pos)+'</span></div></div></td>';
@@ -86,7 +86,7 @@ function renderBoard(d){
       })];
     return '<tr class="'+esc(cls)+'">'+name+cells.join("")+"</tr>";
   }).join("");
-  if(!rows.length)$("rank-body").innerHTML='<tr><td colspan="12" class="no-data">No players match these filters.</td></tr>';
+  if(!rows.length)$("rank-body").innerHTML='<tr><td colspan="13" class="no-data">No players match these filters.</td></tr>';
   $("row-count").textContent=rows.length+" of "+d.players.length+" players";
   $("board-summary").textContent="Sorted by "+columns.find(c=>c.k===state.sort)?.h+" "+(state.asc?"↑":"↓");
 }
@@ -119,28 +119,28 @@ function renderAccuracy(d){
     'A fair platform leaderboard needs at least two sites with a sufficient shared player cohort. '+esc(reason||"");
   $("accuracy-explanation").textContent="Every ranked site is evaluated on the exact same "+cohort.length+" players (top 150 by consensus ADP, where every eligible source has a value). Mean absolute error measures distance to "+stdMetric(m)+" "+(basis==="value"?"replacement-adjusted value rank":"all-position points rank")+". Lower is better; the signed gap is ADP minus actual rank. Consensus is a benchmark, not a platform.";
 }
-function insightList(rows,m,type){
+function insightList(rows,m,type,basis){
   if(!rows.length)return '<div class="no-data">No verified player results yet.</div>';
   return rows.map((p,i)=>{
-    const g=gap(p,m,"raw");
+    const g=gap(p,m,basis);
     return '<div class="insight-player"><span class="insight-num">'+String(i+1).padStart(2,"0")+'</span>'+
-      '<div><div class="insight-name">'+esc(p.name)+'</div><div class="insight-extra">'+esc(p.team||"")+' · '+esc(p.pos)+' · ADP '+val(p.avg_adp)+' → finish #'+val(outcome(p,m,"raw"))+'</div></div>'+
+      '<div><div class="insight-name">'+esc(p.name)+'</div><div class="insight-extra">'+esc(p.team||"")+' · '+esc(p.pos)+' · ADP '+val(p.avg_adp)+' → finish #'+val(outcome(p,m,basis))+'</div></div>'+
       '<div><div class="insight-gap '+(type==="good"?"good":"bad")+'">'+sign(g)+'</div><div class="insight-gap-sub">places</div></div></div>';
   }).join("");
 }
 function renderInsights(d){
-  const m=state.insightMetric;
-  const eligible=d.players.filter(p=>p.avg_adp<=180&&p.stats&&isNum(outcome(p,m,"raw")));
-  const good=[...eligible].sort((a,b)=>gap(b,m,"raw")-gap(a,m,"raw")).filter(p=>gap(p,m,"raw")>0).slice(0,10);
-  const bad=[...eligible].sort((a,b)=>gap(a,m,"raw")-gap(b,m,"raw")).filter(p=>gap(p,m,"raw")<0).slice(0,10);
-  $("steals-list").innerHTML=insightList(good,m,"good");
-  $("busts-list").innerHTML=insightList(bad,m,"bad");
+  const m=state.insightMetric,basis=state.insightBasis;
+  const eligible=d.players.filter(p=>p.avg_adp<=180&&p.stats&&isNum(outcome(p,m,basis)));
+  const good=[...eligible].sort((a,b)=>gap(b,m,basis)-gap(a,m,basis)).filter(p=>gap(p,m,basis)>0).slice(0,10);
+  const bad=[...eligible].sort((a,b)=>gap(a,m,basis)-gap(b,m,basis)).filter(p=>gap(p,m,basis)<0).slice(0,10);
+  $("steals-list").innerHTML=insightList(good,m,"good",basis);
+  $("busts-list").innerHTML=insightList(bad,m,"bad",basis);
   const beat=eligible.filter(p=>gap(p,m,"raw")>0).length;
   const missed=eligible.filter(p=>gap(p,m,"raw")<0).length;
   const provisional=d.season_status==="IN_PROGRESS";
   $("insight-intro").innerHTML='<strong>'+val(eligible.length)+' verifiable early-draft selections</strong> ('+stdMetric(m)+') · '+val(beat)+' above ADP, '+val(missed)+' below. '+
-     (provisional?'<strong>2026 is season-to-date.</strong> These are provisional results, not final bust or steal judgments.':'Finished regular-season rankings; early-round ADP limits the list to players likely drafted in typical leagues.');
-  $("insight-footer").textContent="Selection rule: average ADP ≤180, a verified regular-season player match, ranked by the difference between average ADP and actual "+stdMetric(m)+" overall fantasy-points rank. Missing or unmatched outcomes are never counted as busts. Rankings represent full-season totals, so injuries, usage and missed games matter. The roster-adjusted comparison is available in the rankings and accuracy tabs.";
+     (provisional?'<strong>2026 is season-to-date.</strong> These are provisional results, not final bust or steal judgments.':'Finished regular-season results; the first 180 average ADP picks define the draft cohort.');
+  $("insight-footer").textContent="Selection rule: average ADP ≤180, a verified regular-season player match, ranked by average ADP minus "+stdMetric(m)+" "+(basis==="value"?"replacement-adjusted fantasy value rank":"overall fantasy-points rank")+". Missing or unmatched outcomes are never counted as busts. Rankings use season total points, so injuries and missed games matter. Switch the rank basis to see the unadjusted draft-to-finish gaps.";
 }
 function renderSources(d){
   const src=d.source||{},o=d.outcome_source||{};
@@ -197,9 +197,11 @@ function init(){
   $("team").addEventListener("change",e=>{state.team=e.target.value;renderBoard(current())});
   $("search").addEventListener("input",e=>{state.search=e.target.value;renderBoard(current())});
   $("gap-basis").addEventListener("change",e=>{state.gap=e.target.value;renderBoard(current())});
+  $("board-scoring").addEventListener("change",e=>{state.boardMetric=e.target.value;renderBoard(current())});
   $("accuracy-scoring").addEventListener("change",e=>{state.accuracyMetric=e.target.value;renderAccuracy(current())});
   $("accuracy-basis").addEventListener("change",e=>{state.accuracyBasis=e.target.value;renderAccuracy(current())});
-  $("insight-scoring").addEventListener("change",e=>{state.insightMetric=e.target.value;renderInsights(current());renderBoard(current())});
+  $("insight-scoring").addEventListener("change",e=>{state.insightMetric=e.target.value;renderInsights(current())});
+  $("insight-basis").addEventListener("change",e=>{state.insightBasis=e.target.value;renderInsights(current())});
   $("rank-head").addEventListener("click",e=>{
     const b=e.target.closest("button[data-sort]");
     if(!b)return;

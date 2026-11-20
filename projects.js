@@ -53,6 +53,17 @@ window.RQ_PROJECTS = [
     theme: 'default'
   },
   {
+    id: 'fantasy-football-expectations',
+    title: 'Fantasy Football · Expectations vs. Reality',
+    shortName: 'FF',
+    domain: 'NFL FANTASY ANALYTICS',
+    description: 'Which players delivered on preseason hype? Compare 2015–2026 platform ADP, actual standard and PPR finishes, accuracy by site, and the biggest draft steals and busts.',
+    categories: ['NFL', 'Historical Analysis'],
+    searchKeywords: ['fantasy', 'football', 'ADP', 'draft', 'ESPN', 'Sleeper', 'Yahoo', 'PPR', 'preseason', 'busts', 'steals', 'rankings'],
+    url: 'https://randomquestions-projects.github.io/fantasy-football/',
+    theme: 'football'
+  },
+  {
     id: 'draft-reports',
     title: 'Draft Reports',
     shortName: 'DR',
