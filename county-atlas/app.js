@@ -15,7 +15,7 @@ const names={churches:'Reported congregations',schools:'Recorded K–12 schools'
 const colors=['#e4f2eb','#bfdfd2','#9bcdbd','#76b5a4','#519b8b','#277d6f','#165b50'];
 for(const [key,meta] of Object.entries(E.metrics)){titles[key]=meta.title;names[key]=meta.label;}
 const countTypes=new Set(['churches','schools','public','private','veterans','microbusiness','nonemployer','startups','armed_forces']);
-const canNormalize=()=>countTypes.has(S.variable),isExtra=()=>Object.hasOwn(E.metrics,S.variable);
+const canNormalize=()=>countTypes.has(S.variable),isExtra=()=>Object.hasOwn(E.metrics,S.variable),isSeda=()=>E.metrics[S.variable]?.group==='seda';
 const S={features:[], stateFeatures:[],stateNames:new Map(),rows:new Map(),selected:null,variable:'churches',mode:'count',stateId:'',search:'',rankLimit:30,dirKind:'public',dirItems:[],dirLimit:35,dirCache:new Map(),dirTicket:0,ready:{public:false,private:false,churches:false,population:false},pending:4,errors:[]};
 let svg,projection,path,zoom,topology,countyGroup;
 const fips = v => String(v==null?'':v).replace(/\D/g,'').padStart(5,'0').slice(-5);
@@ -37,7 +37,7 @@ const congregationsPer100Schools = r => {
 };
 const compare = r => !r?null:S.variable==='schools'?schoolTotal(r):S.variable==='ratio'?schoolsPer100(r):S.variable==='congregations_ratio'?congregationsPer100Schools(r):r[S.variable];
 function val(r) { if(!r)return null;const n=compare(r);return n==null||!Number.isFinite(n)?null:canNormalize()&&S.mode==='rate'?(r.population>0?n*10000/r.population:null):n; }
-const presentation=n=>n==null||!Number.isFinite(n)?'—':E.metrics[S.variable]?.kind==='money'?'$'+fmt(n):E.metrics[S.variable]?.kind==='percent'?n.toFixed(1)+'%':isRatio()||(canNormalize()&&S.mode==='rate')?n.toFixed(1):fmt(n);
+const presentation=n=>n==null||!Number.isFinite(n)?'—':isSeda()?(n>0?'+':'')+n.toFixed(2)+' SD':E.metrics[S.variable]?.kind==='money'?'$'+fmt(n):E.metrics[S.variable]?.kind==='percent'?n.toFixed(1)+'%':isRatio()||(canNormalize()&&S.mode==='rate')?n.toFixed(1):fmt(n);
 function acceptable(f) { return (!S.stateId||String(f.id).startsWith(S.stateId))&&(!S.search||(full(f)+' '+f.id).toLowerCase().includes(S.search)); }
 async function fetchData(url,timeout=35000) {
  const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);
@@ -81,12 +81,19 @@ async function published(){
  }catch(e){ /* Live NCES and Census fallback below. */ }
 }
 function renderMap(){
- const vals=S.features.filter(acceptable).map(f=>val(row(String(f.id)))).filter(n=>n!=null&&n>0);
+ const vals=S.features.filter(acceptable).map(f=>val(row(String(f.id)))).filter(n=>n!=null&&(isSeda()||n>0));
  const q=d3.scaleQuantile().domain(vals.length?vals:[1]).range(colors);
- countyGroup.selectAll('path').attr('fill',f=>{const n=val(row(String(f.id)));return n==null?'#edf0ef':n===0?'#f3f8f4':q(n);})
- .style('opacity',f=>acceptable(f)?1:.17);
- $('legend-mid').textContent=presentation(d3.median(vals)||0);
- $('legend-high').textContent=presentation(d3.max(vals)||0);
+ const maxAbs=isSeda()?Math.max(0.1,d3.max(vals.map(Math.abs))||0.1):1;
+ const diverge=d3.scaleLinear().domain([-maxAbs,0,maxAbs]).range(['#ba5260','#f0f3ed','#257964']).clamp(true);
+ countyGroup.selectAll('path').attr('fill',f=>{
+   const n=val(row(String(f.id)));
+   return n==null?'#edf0ef':isSeda()?diverge(n):n===0?'#f3f8f4':q(n);
+ }).style('opacity',f=>acceptable(f)?1:.17);
+ document.querySelectorAll('.legend-ramp i').forEach((el,i)=>{el.style.background=isSeda()?diverge(-maxAbs+i*maxAbs/3):colors[i];});
+ const lowLabel=document.querySelector('.legend-labels span:first-child');
+ if(lowLabel)lowLabel.textContent=isSeda()&&vals.length?presentation(d3.min(vals)):'Low';
+ $('legend-mid').textContent=isSeda()?'0.00 SD':presentation(d3.median(vals)||0);
+ $('legend-high').textContent=vals.length?presentation(d3.max(vals)):'—';
  $('map-title').textContent=titles[S.variable];
 
  const ratio=isRatio();
@@ -100,7 +107,13 @@ function renderMap(){
  $('source-year').textContent=isExtra()?E.metrics[S.variable].year:ratio?'NCES / USRC':S.variable==='churches'?'2020':'NCES';
  const rows=S.features.filter(acceptable).map(f=>row(String(f.id)));
  $('summary-heading').textContent=ratio?(S.variable==='ratio'?'SCHOOLS / CONGREGATIONS':'CONGREGATIONS / SCHOOLS'):isExtra()?'SELECTED METRIC':'NATIONAL TOTAL';
- if(isExtra() && E.metrics[S.variable].kind==='percent'){
+ if(isSeda()){
+  const values=rows.map(compare).filter(Number.isFinite);
+  const mean=values.length?d3.mean(values):null;
+  $('total').textContent=mean==null?'—':(mean>0?'+':'')+mean.toFixed(2)+' SD';
+  $('total-label').textContent='Unweighted average of reporting counties · not student-weighted';
+  $('county-coverage').textContent=fmt(values.length)+' counties with achievement estimates';
+ }else if(isExtra() && E.metrics[S.variable].kind==='percent'){
   const metric=E.metrics[S.variable],complete=rows.filter(r=>r[metric.numerator]!=null&&r[metric.denominator]>0);
   const numerator=complete.reduce((n,r)=>n+r[metric.numerator],0);
   const denominator=complete.reduce((n,r)=>n+r[metric.denominator],0);
@@ -132,8 +145,8 @@ function renderMap(){
  $('rank-column').textContent=isExtra()?names[S.variable]:ratio?(S.variable==='ratio'?'Schools per 100':'Congregations per 100'):S.mode==='rate'?'Per 10K':S.variable==='churches'?'Congregations':'Schools';
  renderSide();rankings();
  const available=isExtra()?E.ready[E.metrics[S.variable].group]:(S.variable==='schools'||isRatio())?S.ready.public&&S.ready.private&&(!isRatio()||S.ready.churches):S.ready[S.variable];
- const waiting=isExtra()?E.pending:S.pending;
- const status=waiting?'Loading national data…':available?'Official datasets · loaded':'Data source unavailable'+(isExtra()?' · Census API may require a key':'');
+ const waiting=isSeda()?false:isExtra()?E.pending:S.pending;
+ const status=isSeda()?(available?'SEDA 6.0 · verified source':'SEDA 6.0 · data and publication permission required'):waiting?'Loading national data…':available?'Official datasets · loaded':'Data source unavailable'+(isExtra()?' · Census API may require a key':'');
  $('data-state').textContent=status;
  $('data-state').classList.toggle('warning',!waiting&&!available);
 }
@@ -151,6 +164,9 @@ function renderSide(){
  ['selected-college',r?.college==null?'—':r.college.toFixed(1)+'%'],
  ['selected-veterans',fmt(r?.veterans)],
  ['selected-military',fmt(r?.armed_forces)],
+ ['selected-seda-overall',r?.seda_achievement==null?'—':(r.seda_achievement>0?'+':'')+r.seda_achievement.toFixed(2)+' SD'],
+ ['selected-seda-math',r?.seda_math==null?'—':(r.seda_math>0?'+':'')+r.seda_math.toFixed(2)+' SD'],
+ ['selected-seda-reading',r?.seda_reading==null?'—':(r.seda_reading>0?'+':'')+r.seda_reading.toFixed(2)+' SD'],
  ['selected-self',r?.self_employed==null?'—':r.self_employed.toFixed(1)+'%'],
  ['selected-nonemp',fmt(r?.nonemployer)]]){const element=$(id);if(element)element.textContent=value;}
  $('open-directory').disabled=!f;
