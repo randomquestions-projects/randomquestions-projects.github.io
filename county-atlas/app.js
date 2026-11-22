@@ -104,7 +104,7 @@ function rankings(){
  if(!list.length){body.innerHTML='<tr><td colspan="5" class="loading">No county totals available with these filters.</td></tr>';return;}
  for(const x of list.slice(0,S.rankLimit)){
   const tr=document.createElement('tr');
-  [title(x.f),region(x.f),presentation(x.n),fmt(compare(Object.assign({},row(String(x.f.id)),{churches:null}))==null?null:row(String(x.f.id)).public+row(String(x.f.id)).private)].forEach((t,i)=>{const td=document.createElement('td');td.textContent=t;if(i>1)td.className='num';tr.append(td);});
+  [title(x.f),region(x.f),presentation(x.n),fmt(row(String(x.f.id)).public==null||row(String(x.f.id)).private==null?null:row(String(x.f.id)).public+row(String(x.f.id)).private)].forEach((t,i)=>{const td=document.createElement('td');td.textContent=t;if(i>1)td.className='num';tr.append(td);});
   const td=document.createElement('td'),b=document.createElement('button');b.type='button';b.className='rank-link';b.textContent='Inspect ↗';b.addEventListener('click',()=>select(x.f));td.append(b);tr.append(td);body.append(tr);
  }
  $('show-more').hidden=list.length<=S.rankLimit;
@@ -212,7 +212,7 @@ function controls(){
  $('county-search').addEventListener('input',e=>{clearTimeout(timer);timer=setTimeout(()=>{S.search=e.target.value.trim().toLowerCase();S.rankLimit=30;renderMap();},160);});
  $('reset').addEventListener('click',()=>{
   $('variable').value='churches';$('measurement').value='count';$('state').value='';$('county-search').value='';
-  Object.assign(S,{variable:'churches',mode:'count',stateId:'',search:'',rankLimit:30,selected:null});
+  Object.assign(S,{variable:S.ready.churches?'churches':'schools',mode:'count',stateId:'',search:'',rankLimit:30,selected:null});$('variable').value=S.variable;
   renderMap();resetZoom();
  });
  $('clear-selection').addEventListener('click',()=>{S.selected=null;S.dirTicket++;S.dirItems=[];renderSide();$('directory-title').textContent='County directory';$('directory-status').textContent='Select a county';$('directory-list').innerHTML='<div class="directory-placeholder">Select a county to see reported locations.</div>';resetZoom();});
