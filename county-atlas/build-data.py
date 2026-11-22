@@ -77,7 +77,7 @@ def schools(s,kind):
  url=SCHOOL[kind];counts={};offset=0
  while True:
   p={"f":"json","where":"1=1","outFields":"CNTY","returnGeometry":"false",
-     "groupByFieldsForStatistics":"CNTY","orderByFields":"CNTY",
+     "groupByFieldsForStatistics":"STFIP,CNTY","orderByFields":"STFIP,CNTY",
      "outStatistics":json.dumps([{"statisticType":"count","onStatisticField":"OBJECTID","outStatisticFieldName":"n"}]),
      "resultOffset":offset,"resultRecordCount":2000}
   r=s.get(url,params=p,timeout=90);r.raise_for_status();data=r.json()
@@ -85,7 +85,7 @@ def schools(s,kind):
   features=data.get("features")
   if not isinstance(features,list):raise ValueError("Missing NCES feature results")
   for feat in features:
-   a=feat.get("attributes") or {};fid=fips(a.get("CNTY"));n=number(a.get("n"))
+   a=feat.get("attributes") or {};county=str(a.get("CNTY") or "").strip();state=str(a.get("STFIP") or "").strip();fid=fips(state.zfill(2)+county.zfill(3)) if (county.isdigit() and len(county)<=3 and state.isdigit()) else fips(county);n=number(a.get("n"))
    if fid and fid[:2] not in EXCLUDE and n is not None:
     if fid in counts:raise ValueError("Duplicate NCES county on pagination")
     counts[fid]=int(n)
