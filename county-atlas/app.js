@@ -9,8 +9,8 @@ const sources = {
   shape: 'https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json',
   population: 'https://api.census.gov/data/2020/dec/pl?get=NAME%2CP1_001N&for=county%3A%2A'
 };
-const titles={churches:'Religious congregations by county',schools:'All K–12 schools by county',public:'Public K–12 schools by county',private:'Private K–12 schools by county',ratio:'K–12 schools per 100 congregations'};
-const names={churches:'Reported congregations',schools:'Recorded K–12 schools',public:'Public K–12 schools',private:'Private K–12 schools',ratio:'Schools per 100 congregations'};
+const titles={churches:'Religious congregations by county',schools:'All K–12 schools by county',public:'Public K–12 schools by county',private:'Private K–12 schools by county',ratio:'K–12 schools per 100 congregations',congregations_ratio:'Congregations per 100 K–12 schools'};
+const names={churches:'Reported congregations',schools:'Recorded K–12 schools',public:'Public K–12 schools',private:'Private K–12 schools',ratio:'Schools per 100 congregations',congregations_ratio:'Congregations per 100 schools'};
 const colors=['#e4f2eb','#bfdfd2','#9bcdbd','#76b5a4','#519b8b','#277d6f','#165b50'];
 const S={features:[], stateFeatures:[],stateNames:new Map(),rows:new Map(),selected:null,variable:'churches',mode:'count',stateId:'',search:'',rankLimit:30,dirKind:'public',dirItems:[],dirLimit:35,dirCache:new Map(),dirTicket:0,ready:{public:false,private:false,churches:false,population:false},pending:4,errors:[]};
 let svg,projection,path,zoom,topology,countyGroup;
@@ -20,14 +20,18 @@ const title = f => (f.properties&&f.properties.name)||('County '+f.id);
 const region = f => S.stateNames.get(String(f.id).slice(0,2))?.name || 'United States';
 const full = f => title(f)+', '+region(f);
 const schoolTotal = r => !r || r.public==null || r.private==null ? null : r.public+r.private;
-const isRatio = () => S.variable==='ratio';
+const isRatio = () => S.variable==='ratio'||S.variable==='congregations_ratio';
 // "Churches" in the source is the US Religion Census count of participating congregations,
 // not a count of Christian church buildings. Do not interpret missing or zero denominators as 0.
 const schoolsPer100 = r => {
  const schools=schoolTotal(r);
  return schools==null || r?.churches==null || r.churches<=0 ? null : schools*100/r.churches;
 };
-const compare = r => S.variable==='schools'?schoolTotal(r):S.variable==='ratio'?schoolsPer100(r):r[S.variable];
+const congregationsPer100Schools = r => {
+ const schools=schoolTotal(r);
+ return schools==null || schools<=0 || r?.churches==null ? null : r.churches*100/schools;
+};
+const compare = r => S.variable==='schools'?schoolTotal(r):S.variable==='ratio'?schoolsPer100(r):S.variable==='congregations_ratio'?congregationsPer100Schools(r):r[S.variable];
 function val(r) { if(!r)return null;const n=compare(r);return n==null?null:!isRatio()&&S.mode==='rate'?(r.population>0?n*10000/r.population:null):n; }
 const presentation = n => n==null||!Number.isFinite(n)?'—':isRatio()||S.mode==='rate'?n.toFixed(1):fmt(n);
 function acceptable(f) { return (!S.stateId||String(f.id).startsWith(S.stateId))&&(!S.search||(full(f)+' '+f.id).toLowerCase().includes(S.search)); }
@@ -85,28 +89,33 @@ function renderMap(){
  $('measurement').disabled=ratio; // Both density denominators would cancel; ratio has fixed units.
  if(ratio) $('measurement').value='count';
  $('map-subtitle').textContent=ratio
-  ? '2024–25 public + 2023–24 private K–12 schools ÷ 2020 USRC congregations × 100'
+  ? (S.variable==='ratio'
+      ? '2024–25 public + 2023–24 private K–12 schools ÷ 2020 USRC congregations × 100'
+      : '2020 USRC congregations ÷ (2024–25 public + 2023–24 private K–12 schools) × 100')
   : (S.variable==='churches'?'2020 U.S. Religion Census':S.variable==='private'?'2023–24 NCES':S.variable==='public'?'2024–25 NCES':'2024–25 public + 2023–24 private')+' · '+(S.mode==='rate'?'per 10,000 residents':'recorded location counts');
  $('source-year').textContent=ratio?'NCES / USRC':S.variable==='churches'?'2020':'NCES';
  const rows=S.features.filter(acceptable).map(f=>row(String(f.id)));
- $('summary-heading').textContent=ratio?'SCHOOLS / CONGREGATIONS':'NATIONAL TOTAL';
+ $('summary-heading').textContent=ratio?(S.variable==='ratio'?'SCHOOLS / CONGREGATIONS':'CONGREGATIONS / SCHOOLS'):'NATIONAL TOTAL';
  if(ratio) {
-  // Aggregate the actual numerators and denominators: never sum or average county ratios.
+  // Weighted national or filtered ratio from pooled counts, not an average of county ratios.
+  // Include counties with valid reported zeros; only an aggregate zero denominator is undefined.
   const complete=rows.filter(r=>schoolTotal(r)!=null && r.churches!=null);
   const schools=complete.reduce((n,r)=>n+schoolTotal(r),0);
   const congregations=complete.reduce((n,r)=>n+r.churches,0);
-  $('total').textContent=congregations>0?(schools*100/congregations).toFixed(1):'—';
-  $('total-label').textContent='K–12 schools per 100 congregations'+(S.stateId||S.search?' · filtered':' · nationwide');
-  $('county-coverage').textContent=fmt(rows.filter(r=>schoolsPer100(r)!=null).length)+' counties with defined ratio';
+  const numerator=S.variable==='ratio'?schools:congregations;
+  const denominator=S.variable==='ratio'?congregations:schools;
+  $('total').textContent=denominator>0?(numerator*100/denominator).toFixed(1):'—';
+  $('total-label').textContent=names[S.variable]+(S.stateId||S.search?' · filtered':' · nationwide');
+  $('county-coverage').textContent=fmt(rows.filter(r=>val(r)!=null).length)+' counties with defined ratio';
  } else {
   const values=rows.map(compare).filter(n=>n!=null&&Number.isFinite(n));
   $('total').textContent=values.length?fmt(values.reduce((a,b)=>a+b,0)):'—';
   $('total-label').textContent=names[S.variable]+(S.stateId||S.search?' · filtered':' · nationwide');
   $('county-coverage').textContent=fmt(values.length)+' counties covered';
  }
- $('rank-column').textContent=ratio?'Schools per 100':S.mode==='rate'?'Per 10K':S.variable==='churches'?'Congregations':'Schools';
+ $('rank-column').textContent=ratio?(S.variable==='ratio'?'Schools per 100':'Congregations per 100'):S.mode==='rate'?'Per 10K':S.variable==='churches'?'Congregations':'Schools';
  renderSide();rankings();
- const available=(S.variable==='schools'||S.variable==='ratio')?S.ready.public&&S.ready.private&&(S.variable!=='ratio'||S.ready.churches):S.ready[S.variable];
+ const available=(S.variable==='schools'||isRatio())?S.ready.public&&S.ready.private&&(!isRatio()||S.ready.churches):S.ready[S.variable];
  const status=S.pending?'Loading national data…':available?'Official datasets · '+(S.errors.length?'some sources unavailable':'loaded'):'Data source unavailable';
  $('data-state').textContent=status;
  $('data-state').classList.toggle('warning',!S.pending&&!available);
