@@ -1,0 +1,59 @@
+name: CountyScope national data refresh
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '21 9 1 * *'
+  push:
+    paths:
+      - county-atlas/build-data.py
+      - .github/workflows/county-atlas-refresh.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: countyscope-publication
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout verified publisher
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Data processing dependencies
+        run: python -m pip install --disable-pip-version-check 'requests>=2.32,<3' 'openpyxl>=3.1,<4'
+      - name: Build and validate official county aggregates
+        run: python county-atlas/build-data.py
+      - name: JSON schema and range sanity
+        run: |
+          python - <<'PY'
+          import json
+          with open('county-atlas/data/county-counts.json', encoding='utf-8') as f:
+              obj=json.load(f)
+          rows=obj['counties']
+          ids=[r['fips'] for r in rows]
+          assert len(rows)>=3100 and len(ids)==len(set(ids))
+          assert all(len(fid)==5 and fid.isdigit() for fid in ids)
+          assert all(r['population']>=0 and r['public']>=0 and r['private']>=0 for r in rows)
+          assert 350000<=sum((r['churches'] or 0) for r in rows)<=365000
+          print('VALIDATED',len(rows),'counties')
+          PY
+      - name: Publish aggregate data only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add county-atlas/data/county-counts.json
+          if git diff --cached --quiet; then
+            echo "No changes to publish"
+          else
+            git commit -m "Update validated CountyScope national county aggregates"
+            git push
+          fi
