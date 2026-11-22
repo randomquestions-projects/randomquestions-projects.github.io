@@ -99,8 +99,20 @@ function renderMap(){
   : (S.variable==='churches'?'2020 U.S. Religion Census':S.variable==='private'?'2023–24 NCES':S.variable==='public'?'2024–25 NCES':'2024–25 public + 2023–24 private')+' · '+(S.mode==='rate'?'per 10,000 residents':'recorded location counts');
  $('source-year').textContent=isExtra()?E.metrics[S.variable].year:ratio?'NCES / USRC':S.variable==='churches'?'2020':'NCES';
  const rows=S.features.filter(acceptable).map(f=>row(String(f.id)));
- $('summary-heading').textContent=ratio?(S.variable==='ratio'?'SCHOOLS / CONGREGATIONS':'CONGREGATIONS / SCHOOLS'):'NATIONAL TOTAL';
- if(ratio) {
+ $('summary-heading').textContent=ratio?(S.variable==='ratio'?'SCHOOLS / CONGREGATIONS':'CONGREGATIONS / SCHOOLS'):isExtra()?'SELECTED METRIC':'NATIONAL TOTAL';
+ if(isExtra() && E.metrics[S.variable].kind==='percent'){
+  const metric=E.metrics[S.variable],complete=rows.filter(r=>r[metric.numerator]!=null&&r[metric.denominator]>0);
+  const numerator=complete.reduce((n,r)=>n+r[metric.numerator],0);
+  const denominator=complete.reduce((n,r)=>n+r[metric.denominator],0);
+  $('total').textContent=denominator>0?(100*numerator/denominator).toFixed(1)+'%':'—';
+  $('total-label').textContent=names[S.variable]+' · pooled share of reporting counties';
+  $('county-coverage').textContent=fmt(complete.length)+' counties reporting';
+ }else if(isExtra() && E.metrics[S.variable].kind==='money'){
+  const values=rows.map(r=>r.income).filter(n=>n!=null&&Number.isFinite(n));
+  $('total').textContent=values.length?'$'+fmt(d3.median(values)):'—';
+  $('total-label').textContent='Median of county medians · not national household median';
+  $('county-coverage').textContent=fmt(values.length)+' counties reporting';
+ }else if(ratio) {
   // Weighted national or filtered ratio from pooled counts, not an average of county ratios.
   // Include counties with valid reported zeros; only an aggregate zero denominator is undefined.
   const complete=rows.filter(r=>schoolTotal(r)!=null && r.churches!=null);
@@ -133,6 +145,13 @@ function renderSide(){
  $('selected-value').textContent=f?presentation(val(r)):'—';
  $('selected-public').textContent=fmt(r?.public);$('selected-private').textContent=fmt(r?.private);
  $('selected-churches').textContent=fmt(r?.churches);$('selected-pop').textContent=fmt(r?.population);
+ for(const [id,value] of [
+ ['selected-income',r?.income==null?'—':'$'+fmt(r.income)],
+ ['selected-hs',r?.highschool==null?'—':r.highschool.toFixed(1)+'%'],
+ ['selected-college',r?.college==null?'—':r.college.toFixed(1)+'%'],
+ ['selected-veterans',fmt(r?.veterans)],
+ ['selected-self',r?.self_employed==null?'—':r.self_employed.toFixed(1)+'%'],
+ ['selected-nonemp',fmt(r?.nonemployer)]]){const element=$(id);if(element)element.textContent=value;}
  $('open-directory').disabled=!f;
  d3.select('#selected-outline').attr('d',f?path(f):null);
 }
