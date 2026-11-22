@@ -1,6 +1,7 @@
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
+const E=window.CountyExtras;if(!E)throw Error('Census enrichment module missing');
 const fmt = n => Number.isFinite(n) ? Math.round(n).toLocaleString('en-US') : '—';
 const sources = {
   public: 'https://services1.arcgis.com/Ua5sjt3LWTPigjyD/arcgis/rest/services/Public_School_Locations_Current/FeatureServer/0',
@@ -12,6 +13,9 @@ const sources = {
 const titles={churches:'Religious congregations by county',schools:'All K–12 schools by county',public:'Public K–12 schools by county',private:'Private K–12 schools by county',ratio:'K–12 schools per 100 congregations',congregations_ratio:'Congregations per 100 K–12 schools'};
 const names={churches:'Reported congregations',schools:'Recorded K–12 schools',public:'Public K–12 schools',private:'Private K–12 schools',ratio:'Schools per 100 congregations',congregations_ratio:'Congregations per 100 schools'};
 const colors=['#e4f2eb','#bfdfd2','#9bcdbd','#76b5a4','#519b8b','#277d6f','#165b50'];
+for(const [key,meta] of Object.entries(E.metrics)){titles[key]=meta.title;names[key]=meta.label;}
+const countTypes=new Set(['churches','schools','public','private','veterans','microbusiness','nonemployer','startups']);
+const canNormalize=()=>countTypes.has(S.variable),isExtra=()=>Object.hasOwn(E.metrics,S.variable);
 const S={features:[], stateFeatures:[],stateNames:new Map(),rows:new Map(),selected:null,variable:'churches',mode:'count',stateId:'',search:'',rankLimit:30,dirKind:'public',dirItems:[],dirLimit:35,dirCache:new Map(),dirTicket:0,ready:{public:false,private:false,churches:false,population:false},pending:4,errors:[]};
 let svg,projection,path,zoom,topology,countyGroup;
 const fips = v => String(v==null?'':v).replace(/\D/g,'').padStart(5,'0').slice(-5);
@@ -31,9 +35,9 @@ const congregationsPer100Schools = r => {
  const schools=schoolTotal(r);
  return schools==null || schools<=0 || r?.churches==null ? null : r.churches*100/schools;
 };
-const compare = r => S.variable==='schools'?schoolTotal(r):S.variable==='ratio'?schoolsPer100(r):S.variable==='congregations_ratio'?congregationsPer100Schools(r):r[S.variable];
-function val(r) { if(!r)return null;const n=compare(r);return n==null?null:!isRatio()&&S.mode==='rate'?(r.population>0?n*10000/r.population:null):n; }
-const presentation = n => n==null||!Number.isFinite(n)?'—':isRatio()||S.mode==='rate'?n.toFixed(1):fmt(n);
+const compare = r => !r?null:S.variable==='schools'?schoolTotal(r):S.variable==='ratio'?schoolsPer100(r):S.variable==='congregations_ratio'?congregationsPer100Schools(r):r[S.variable];
+function val(r) { if(!r)return null;const n=compare(r);return n==null||!Number.isFinite(n)?null:canNormalize()&&S.mode==='rate'?(r.population>0?n*10000/r.population:null):n; }
+const presentation=n=>n==null||!Number.isFinite(n)?'—':E.metrics[S.variable]?.kind==='money'?'$'+fmt(n):E.metrics[S.variable]?.kind==='percent'?n.toFixed(1)+'%':isRatio()||(canNormalize()&&S.mode==='rate')?n.toFixed(1):fmt(n);
 function acceptable(f) { return (!S.stateId||String(f.id).startsWith(S.stateId))&&(!S.search||(full(f)+' '+f.id).toLowerCase().includes(S.search)); }
 async function fetchData(url,timeout=35000) {
  const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);
@@ -86,14 +90,14 @@ function renderMap(){
  $('map-title').textContent=titles[S.variable];
 
  const ratio=isRatio();
- $('measurement').disabled=ratio; // Both density denominators would cancel; ratio has fixed units.
- if(ratio) $('measurement').value='count';
- $('map-subtitle').textContent=ratio
+ $('measurement').disabled=!canNormalize(); // Ratios, income and shares have fixed units.
+ if(!canNormalize()){S.mode='count';$('measurement').value='count';}
+ $('map-subtitle').textContent=isExtra()?E.metrics[S.variable].year+' · '+E.metrics[S.variable].label:ratio
   ? (S.variable==='ratio'
       ? '2024–25 public + 2023–24 private K–12 schools ÷ 2020 USRC congregations × 100'
       : '2020 USRC congregations ÷ (2024–25 public + 2023–24 private K–12 schools) × 100')
   : (S.variable==='churches'?'2020 U.S. Religion Census':S.variable==='private'?'2023–24 NCES':S.variable==='public'?'2024–25 NCES':'2024–25 public + 2023–24 private')+' · '+(S.mode==='rate'?'per 10,000 residents':'recorded location counts');
- $('source-year').textContent=ratio?'NCES / USRC':S.variable==='churches'?'2020':'NCES';
+ $('source-year').textContent=isExtra()?E.metrics[S.variable].year:ratio?'NCES / USRC':S.variable==='churches'?'2020':'NCES';
  const rows=S.features.filter(acceptable).map(f=>row(String(f.id)));
  $('summary-heading').textContent=ratio?(S.variable==='ratio'?'SCHOOLS / CONGREGATIONS':'CONGREGATIONS / SCHOOLS'):'NATIONAL TOTAL';
  if(ratio) {
@@ -113,18 +117,19 @@ function renderMap(){
   $('total-label').textContent=names[S.variable]+(S.stateId||S.search?' · filtered':' · nationwide');
   $('county-coverage').textContent=fmt(values.length)+' counties covered';
  }
- $('rank-column').textContent=ratio?(S.variable==='ratio'?'Schools per 100':'Congregations per 100'):S.mode==='rate'?'Per 10K':S.variable==='churches'?'Congregations':'Schools';
+ $('rank-column').textContent=isExtra()?names[S.variable]:ratio?(S.variable==='ratio'?'Schools per 100':'Congregations per 100'):S.mode==='rate'?'Per 10K':S.variable==='churches'?'Congregations':'Schools';
  renderSide();rankings();
- const available=(S.variable==='schools'||isRatio())?S.ready.public&&S.ready.private&&(!isRatio()||S.ready.churches):S.ready[S.variable];
- const status=S.pending?'Loading national data…':available?'Official datasets · '+(S.errors.length?'some sources unavailable':'loaded'):'Data source unavailable';
+ const available=isExtra()?E.ready[E.metrics[S.variable].group]:(S.variable==='schools'||isRatio())?S.ready.public&&S.ready.private&&(!isRatio()||S.ready.churches):S.ready[S.variable];
+ const waiting=isExtra()?E.pending:S.pending;
+ const status=waiting?'Loading national data…':available?'Official datasets · loaded':'Data source unavailable'+(isExtra()?' · Census API may require a key':'');
  $('data-state').textContent=status;
- $('data-state').classList.toggle('warning',!S.pending&&!available);
+ $('data-state').classList.toggle('warning',!waiting&&!available);
 }
 function renderSide(){
  const f=S.selected,r=f?row(String(f.id)):null;
  $('selected-name').textContent=f?title(f):'Select a county';
  $('selected-state').textContent=f?region(f)+' · FIPS '+f.id:'Click a county on the map or in the rankings.';
- $('selected-metric-label').textContent=names[S.variable]+(!isRatio()&&S.mode==='rate'?' per 10K':'');
+ $('selected-metric-label').textContent=names[S.variable]+(canNormalize()&&S.mode==='rate'?' per 10K':'');
  $('selected-value').textContent=f?presentation(val(r)):'—';
  $('selected-public').textContent=fmt(r?.public);$('selected-private').textContent=fmt(r?.private);
  $('selected-churches').textContent=fmt(r?.churches);$('selected-pop').textContent=fmt(r?.population);
@@ -226,7 +231,7 @@ function mapInit(){
    .on('mousemove',(e,d)=>{
       tip.replaceChildren();
       const b=document.createElement('strong');b.textContent=full(d);
-      const n=document.createElement('span');n.textContent=names[S.variable]+': '+presentation(val(row(String(d.id))))+(!isRatio()&&S.mode==='rate'?' per 10K':'');
+      const n=document.createElement('span');n.textContent=names[S.variable]+': '+presentation(val(row(String(d.id))))+(canNormalize()&&S.mode==='rate'?' per 10K':'');
       tip.append(b,n);tip.hidden=false;
       const rect=parent.getBoundingClientRect();
       tip.style.left=Math.min(Math.max(8,e.clientX-rect.left+14),Math.max(8,rect.width-210))+'px';
@@ -240,7 +245,7 @@ function mapInit(){
  $('zoom-reset').addEventListener('click',resetZoom);
 }
 function controls(){
- $('variable').addEventListener('change',e=>{S.variable=e.target.value;if(isRatio())S.mode='count';renderMap();});
+ $('variable').addEventListener('change',e=>{S.variable=e.target.value;if(!canNormalize())S.mode='count';renderMap();});
  $('measurement').addEventListener('change',e=>{S.mode=e.target.value;renderMap();});
  $('state').addEventListener('change',e=>{S.stateId=e.target.value;S.rankLimit=30;const st=S.stateNames.get(S.stateId);if(st)zoomTo(st.feature,5);else resetZoom();renderMap();});
  let timer;
@@ -275,7 +280,7 @@ async function main(){
  else tasks.push(population().catch(e=>S.errors.push('Census: '+e.message)).finally(()=>{S.pending--;renderMap();}));
  S.pending--;if(!S.ready.churches)S.errors.push('USRC county summary not yet published');
  renderMap();
- await Promise.allSettled(tasks);
+ await Promise.allSettled([...tasks,E.load(S.rows,()=>renderMap())]);
  if(!S.ready.churches&&(S.ready.public||S.ready.private)){
   $('variable').value='schools';S.variable='schools';renderMap();
  }
