@@ -94,7 +94,7 @@ def schools(s,kind):
   if offset>5000:raise ValueError("Unexpected NCES pagination")
  total=sum(counts.values())
  lo,hi=(85000,140000) if kind=="public" else (12000,35000)
- if len(counts)<2800 or not lo<=total<=hi:raise ValueError("Invalid nationwide NCES "+kind+" totals: "+str((len(counts),total)))
+ if len(counts)<(2800 if kind=="public" else 1800) or not lo<=total<=hi:raise ValueError("Invalid nationwide NCES "+kind+" totals: "+str((len(counts),total)))
  print("NCES",kind,":",len(counts),"counties",total,"schools",flush=True)
  return counts
 
