@@ -54,7 +54,9 @@ def religion(s):
    a=pick({"fips","countyfips","countyfipscode","fipscode","countycode"})
    b=pick({"congregations","totalcongregations","numberofcongregations","congregationstotal","totalnumberofcongregations"})
    if a is None or b is None:continue
-   found={};duplicate=False
+   found={};found_pop={};duplicate=False
+   pop_idx=next((i for i,k in enumerate(keys) if ('population' in k or k in ('pop2020','totalpop','censuspop')) and not any(bad in k for bad in ('percent','pct','rate','persq'))),None)
+   print('USRC county header:',[(key(x),i) for i,x in enumerate(headers) if x is not None][:30],flush=True)
    for line in ws.iter_rows(min_row=ix+1,values_only=True):
     fid=fips(line[a] if len(line)>a else None)
     if not fid or fid[:2] in EXCLUDE:continue
@@ -62,16 +64,20 @@ def religion(s):
     if n is None or n<0 or n!=int(n):continue
     if fid in found:duplicate=True;break
     found[fid]=int(n)
+    if pop_idx is not None and len(line)>pop_idx:
+     value=number(line[pop_idx]);
+     if value is not None and value>=0 and value==int(value):found_pop[fid]=int(value)
    if not duplicate and 3000<=len(found)<=3300:
-    candidates.append((ws.title,found))
+    candidates.append((ws.title,found,found_pop))
    break
  wb.close()
  if not candidates:raise ValueError("USRC county workbook structure unknown; refusing to publish")
  candidates.sort(key=lambda x:abs(sum(x[1].values())-356642))
- name,rows=candidates[0];total=sum(rows.values())
+ name,rows,pop=candidates[0];total=sum(rows.values())
  if not 350000<=total<=365000:raise ValueError("USRC congregation total failed validation "+str(total))
  print("USRC:",name,len(rows),"counties",total,"congregations",flush=True)
- return rows
+ print('USRC 2020 population fields:',len(pop),'total:',sum(pop.values()),flush=True)
+ return rows,pop
 
 def schools(s,kind):
  url=SCHOOL[kind];counts={};offset=0
@@ -110,8 +116,13 @@ def population(s):
  return rows
 
 def build():
- s=session();religion_count=religion(s)
- public=schools(s,"public");private=schools(s,"private");pop=population(s)
+ s=session();religion_count,embedded_pop=religion(s)
+ public=schools(s,"public");private=schools(s,"private")
+ try:pop=population(s)
+ except Exception as e:
+  print('Census API unavailable:',type(e).__name__,str(e)[:200],'; using original USRC Census population columns',flush=True)
+  pop=embedded_pop
+ if len(pop)<3100:raise ValueError('No validated 2020 county populations available: '+str(len(pop)))
  # Null congregations means not reported; zero school locations is a real zero
  # only after a complete nationwide NCES query passed coverage checks.
  data=[{"fips":k,"churches":religion_count.get(k),"public":public.get(k,0),
