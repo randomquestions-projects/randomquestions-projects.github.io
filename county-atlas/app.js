@@ -9,8 +9,8 @@ const sources = {
   shape: 'https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json',
   population: 'https://api.census.gov/data/2020/dec/pl?get=NAME%2CP1_001N&for=county%3A%2A'
 };
-const titles={churches:'Religious congregations by county',schools:'All K–12 schools by county',public:'Public K–12 schools by county',private:'Private K–12 schools by county'};
-const names={churches:'Reported congregations',schools:'Recorded K–12 schools',public:'Public K–12 schools',private:'Private K–12 schools'};
+const titles={churches:'Religious congregations by county',schools:'All K–12 schools by county',public:'Public K–12 schools by county',private:'Private K–12 schools by county',ratio:'K–12 schools per 100 congregations'};
+const names={churches:'Reported congregations',schools:'Recorded K–12 schools',public:'Public K–12 schools',private:'Private K–12 schools',ratio:'Schools per 100 congregations'};
 const colors=['#e4f2eb','#bfdfd2','#9bcdbd','#76b5a4','#519b8b','#277d6f','#165b50'];
 const S={features:[], stateFeatures:[],stateNames:new Map(),rows:new Map(),selected:null,variable:'churches',mode:'count',stateId:'',search:'',rankLimit:30,dirKind:'public',dirItems:[],dirLimit:35,dirCache:new Map(),dirTicket:0,ready:{public:false,private:false,churches:false,population:false},pending:4,errors:[]};
 let svg,projection,path,zoom,topology,countyGroup;
@@ -19,9 +19,17 @@ function row(id) { if(!S.rows.has(id))S.rows.set(id,{public:null,private:null,ch
 const title = f => (f.properties&&f.properties.name)||('County '+f.id);
 const region = f => S.stateNames.get(String(f.id).slice(0,2))?.name || 'United States';
 const full = f => title(f)+', '+region(f);
-const compare = r => S.variable==='schools'?(r.public==null||r.private==null?null:r.public+r.private):r[S.variable];
-function val(r) { if(!r)return null;const n=compare(r);return n==null?null:S.mode==='rate'?(r.population>0?n*10000/r.population:null):n; }
-const presentation = n => n==null||!Number.isFinite(n)?'—':S.mode==='rate'?n.toFixed(1):fmt(n);
+const schoolTotal = r => !r || r.public==null || r.private==null ? null : r.public+r.private;
+const isRatio = () => S.variable==='ratio';
+// "Churches" in the source is the US Religion Census count of participating congregations,
+// not a count of Christian church buildings. Do not interpret missing or zero denominators as 0.
+const schoolsPer100 = r => {
+ const schools=schoolTotal(r);
+ return schools==null || r?.churches==null || r.churches<=0 ? null : schools*100/r.churches;
+};
+const compare = r => S.variable==='schools'?schoolTotal(r):S.variable==='ratio'?schoolsPer100(r):r[S.variable];
+function val(r) { if(!r)return null;const n=compare(r);return n==null?null:!isRatio()&&S.mode==='rate'?(r.population>0?n*10000/r.population:null):n; }
+const presentation = n => n==null||!Number.isFinite(n)?'—':isRatio()||S.mode==='rate'?n.toFixed(1):fmt(n);
 function acceptable(f) { return (!S.stateId||String(f.id).startsWith(S.stateId))&&(!S.search||(full(f)+' '+f.id).toLowerCase().includes(S.search)); }
 async function fetchData(url,timeout=35000) {
  const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);
@@ -72,15 +80,33 @@ function renderMap(){
  $('legend-mid').textContent=presentation(d3.median(vals)||0);
  $('legend-high').textContent=presentation(d3.max(vals)||0);
  $('map-title').textContent=titles[S.variable];
- $('map-subtitle').textContent=(S.variable==='churches'?'2020 U.S. Religion Census':S.variable==='private'?'2023–24 NCES':S.variable==='public'?'2024–25 NCES':'2024–25 public + 2023–24 private')+' · '+(S.mode==='rate'?'per 10,000 residents':'recorded location counts');
- $('source-year').textContent=S.variable==='churches'?'2020':'NCES';
- const values=S.features.filter(acceptable).map(f=>compare(row(String(f.id)))).filter(n=>n!=null&&Number.isFinite(n));
- $('total').textContent=values.length?fmt(values.reduce((a,b)=>a+b,0)):'—';
- $('total-label').textContent=names[S.variable]+(S.stateId||S.search?' · filtered':' · nationwide');
- $('county-coverage').textContent=fmt(values.length)+' counties covered';
- $('rank-column').textContent=S.mode==='rate'?'Per 10K':S.variable==='churches'?'Congregations':'Schools';
+
+ const ratio=isRatio();
+ $('measurement').disabled=ratio; // Both density denominators would cancel; ratio has fixed units.
+ if(ratio) $('measurement').value='count';
+ $('map-subtitle').textContent=ratio
+  ? '2024–25 public + 2023–24 private K–12 schools ÷ 2020 USRC congregations × 100'
+  : (S.variable==='churches'?'2020 U.S. Religion Census':S.variable==='private'?'2023–24 NCES':S.variable==='public'?'2024–25 NCES':'2024–25 public + 2023–24 private')+' · '+(S.mode==='rate'?'per 10,000 residents':'recorded location counts');
+ $('source-year').textContent=ratio?'NCES / USRC':S.variable==='churches'?'2020':'NCES';
+ const rows=S.features.filter(acceptable).map(f=>row(String(f.id)));
+ $('summary-heading').textContent=ratio?'SCHOOLS / CONGREGATIONS':'NATIONAL TOTAL';
+ if(ratio) {
+  // Aggregate the actual numerators and denominators: never sum or average county ratios.
+  const complete=rows.filter(r=>schoolTotal(r)!=null && r.churches!=null);
+  const schools=complete.reduce((n,r)=>n+schoolTotal(r),0);
+  const congregations=complete.reduce((n,r)=>n+r.churches,0);
+  $('total').textContent=congregations>0?(schools*100/congregations).toFixed(1):'—';
+  $('total-label').textContent='K–12 schools per 100 congregations'+(S.stateId||S.search?' · filtered':' · nationwide');
+  $('county-coverage').textContent=fmt(rows.filter(r=>schoolsPer100(r)!=null).length)+' counties with defined ratio';
+ } else {
+  const values=rows.map(compare).filter(n=>n!=null&&Number.isFinite(n));
+  $('total').textContent=values.length?fmt(values.reduce((a,b)=>a+b,0)):'—';
+  $('total-label').textContent=names[S.variable]+(S.stateId||S.search?' · filtered':' · nationwide');
+  $('county-coverage').textContent=fmt(values.length)+' counties covered';
+ }
+ $('rank-column').textContent=ratio?'Schools per 100':S.mode==='rate'?'Per 10K':S.variable==='churches'?'Congregations':'Schools';
  renderSide();rankings();
- const available=S.variable==='schools'?S.ready.public&&S.ready.private:S.ready[S.variable];
+ const available=(S.variable==='schools'||S.variable==='ratio')?S.ready.public&&S.ready.private&&(S.variable!=='ratio'||S.ready.churches):S.ready[S.variable];
  const status=S.pending?'Loading national data…':available?'Official datasets · '+(S.errors.length?'some sources unavailable':'loaded'):'Data source unavailable';
  $('data-state').textContent=status;
  $('data-state').classList.toggle('warning',!S.pending&&!available);
@@ -89,7 +115,7 @@ function renderSide(){
  const f=S.selected,r=f?row(String(f.id)):null;
  $('selected-name').textContent=f?title(f):'Select a county';
  $('selected-state').textContent=f?region(f)+' · FIPS '+f.id:'Click a county on the map or in the rankings.';
- $('selected-metric-label').textContent=names[S.variable]+(S.mode==='rate'?' per 10K':'');
+ $('selected-metric-label').textContent=names[S.variable]+(!isRatio()&&S.mode==='rate'?' per 10K':'');
  $('selected-value').textContent=f?presentation(val(r)):'—';
  $('selected-public').textContent=fmt(r?.public);$('selected-private').textContent=fmt(r?.private);
  $('selected-churches').textContent=fmt(r?.churches);$('selected-pop').textContent=fmt(r?.population);
@@ -191,7 +217,7 @@ function mapInit(){
    .on('mousemove',(e,d)=>{
       tip.replaceChildren();
       const b=document.createElement('strong');b.textContent=full(d);
-      const n=document.createElement('span');n.textContent=names[S.variable]+': '+presentation(val(row(String(d.id))))+(S.mode==='rate'?' per 10K':'');
+      const n=document.createElement('span');n.textContent=names[S.variable]+': '+presentation(val(row(String(d.id))))+(!isRatio()&&S.mode==='rate'?' per 10K':'');
       tip.append(b,n);tip.hidden=false;
       const rect=parent.getBoundingClientRect();
       tip.style.left=Math.min(Math.max(8,e.clientX-rect.left+14),Math.max(8,rect.width-210))+'px';
@@ -205,7 +231,7 @@ function mapInit(){
  $('zoom-reset').addEventListener('click',resetZoom);
 }
 function controls(){
- $('variable').addEventListener('change',e=>{S.variable=e.target.value;renderMap();});
+ $('variable').addEventListener('change',e=>{S.variable=e.target.value;if(isRatio())S.mode='count';renderMap();});
  $('measurement').addEventListener('change',e=>{S.mode=e.target.value;renderMap();});
  $('state').addEventListener('change',e=>{S.stateId=e.target.value;S.rankLimit=30;const st=S.stateNames.get(S.stateId);if(st)zoomTo(st.feature,5);else resetZoom();renderMap();});
  let timer;
