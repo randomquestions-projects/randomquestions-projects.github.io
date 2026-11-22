@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="styles.css">
 <script defer src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<script defer src="extra-data.js"></script>
 <script defer src="app.js"></script>
 </head>
 <body>
@@ -29,7 +30,22 @@
 
     <section class="workspace" aria-label="Interactive county map explorer">
       <div class="toolbar">
-        <label><span>MAP VARIABLE</span><select id="variable"><option value="churches">Churches / congregations*</option><option value="schools">All K–12 schools</option><option value="public">Public K–12 schools</option><option value="private">Private K–12 schools</option><option value="ratio">Schools per 100 congregations</option><option value="congregations_ratio">Congregations per 100 schools</option></select></label>
+        <label><span>MAP VARIABLE</span><select id="variable"><option value="churches">Churches / congregations*</option><option value="schools">All K–12 schools</option><option value="public">Public K–12 schools</option><option value="private">Private K–12 schools</option><option value="ratio">Schools per 100 congregations</option><option value="congregations_ratio">Congregations per 100 schools</option>
+<optgroup label="Education & attainment">
+<option value="highschool">High school diploma+ · adults 25+ (%)</option>
+<option value="college">Bachelor's degree+ · adults 25+ (%)</option>
+</optgroup>
+<optgroup label="Income & military history">
+<option value="income">Median household income ($)</option>
+<option value="veterans">Civilian veterans (#)</option>
+<option value="veteran_share">Civilian veterans (% of adults)</option>
+</optgroup>
+<optgroup label="Business & entrepreneurship">
+<option value="microbusiness">Establishments with 1–4 employees (#)</option>
+<option value="nonemployer">Nonemployer businesses (#)</option>
+<option value="self_employed">Self-employed residents (%)</option>
+<option value="startups">New employer establishments (#)</option>
+</optgroup></select></label>
         <label><span>HOW TO COMPARE</span><select id="measurement"><option value="count">Total locations</option><option value="rate">Per 10,000 residents</option></select></label>
         <label><span>STATE</span><select id="state"><option value="">All states</option></select></label>
         <label class="search"><span>COUNTY SEARCH</span><input id="county-search" type="search" autocomplete="off" placeholder="Find a county or FIPS…" aria-label="Find county"></label>
@@ -48,7 +64,13 @@
           <div class="side-top"><span class="mini-label" id="summary-heading">NATIONAL TOTAL</span><div class="big-number" id="total">—</div><p id="total-label">Reported congregations</p><div class="side-badges"><span id="county-coverage">— counties reporting</span><span id="source-year">2020</span></div></div>
           <div class="selected"><div class="section-row"><span class="mini-label">COUNTY SPOTLIGHT</span><button id="clear-selection" type="button">Clear</button></div><h2 id="selected-name">Select a county</h2><p id="selected-state">Click a county on the map or in the rankings.</p>
             <div class="selected-stat"><span id="selected-metric-label">Congregations</span><strong id="selected-value">—</strong></div>
-            <div class="stats-split"><div><span>Schools · public</span><b id="selected-public">—</b></div><div><span>Schools · private</span><b id="selected-private">—</b></div><div><span>Congregations*</span><b id="selected-churches">—</b></div><div><span>Population · 2020</span><b id="selected-pop">—</b></div></div>
+            <div class="stats-split"><div><span>Schools · public</span><b id="selected-public">—</b></div><div><span>Schools · private</span><b id="selected-private">—</b></div><div><span>Congregations*</span><b id="selected-churches">—</b></div><div><span>Population · 2020</span><b id="selected-pop">—</b></div>
+<div><span>Median income · ACS</span><b id="selected-income">—</b></div>
+<div><span>High-school diploma+ · 25+</span><b id="selected-hs">—</b></div>
+<div><span>Bachelor's degree+ · 25+</span><b id="selected-college">—</b></div>
+<div><span>Civilian veterans</span><b id="selected-veterans">—</b></div>
+<div><span>Self-employed · employed 16+</span><b id="selected-self">—</b></div>
+<div><span>Nonemployer businesses</span><b id="selected-nonemp">—</b></div></div>
             <button id="open-directory" type="button" class="open-directory" disabled>Explore local listings <span>↗</span></button>
           </div>
           <div class="side-note">* Congregations include participating religions, not just Christian churches, and are not verified building counts. Both ratio views use all public and private K–12 schools. Schools per 100 congregations is undefined where congregations are zero; congregations per 100 schools is undefined where schools are zero. Both display no data when their denominator is zero or either count is missing. School and congregation source years differ.</div>
@@ -71,7 +93,14 @@
         <article><span>02 / SCHOOLS</span><h3>Official K–12 school locations</h3><p>NCES Common Core of Data 2024–25 public schools and Private School Survey 2023–24 private schools. Historical directories can include schools whose operational status has since changed.</p><a href="https://nces.ed.gov/programs/edge/Geographic/SchoolLocations" target="_blank" rel="noopener">NCES EDGE ↗</a></article>
         <article><span>03 / LOCAL DIRECTORY</span><h3>Records are not interchangeable</h3><p>School names and addresses come from NCES. Worship listings, when available, come from DHS/HIFLD's geocoded nonprofit inventory and may be incomplete or outdated. They are not used to calculate the congregation map.</p><a href="https://catalog.data.gov/dataset/all-places-of-worship" target="_blank" rel="noopener">DHS HIFLD ↗</a></article>
         <article><span>04 / GEOGRAPHY</span><h3>Rates, ratios and county boundaries</h3><p>Population rates divide each count by 2020 population, then multiply by 10,000. The two ratios are (public + private schools) ÷ reported congregations × 100 and reported congregations ÷ (public + private schools) × 100. Population normalization does not apply to either, so the rate control is disabled for both. National and filtered ratios use pooled totals, not averages of county ratios. Small denominators can produce extreme values; a zero denominator or missing count makes a county's ratio undefined. Boundaries use US Atlas Census-derived geography. Historical FIPS changes can cause unmatched counties.</p><a href="https://github.com/topojson/us-atlas" target="_blank" rel="noopener">US Atlas geography ↗</a></article>
-      </div><p class="source-fine">Coverage: the 50 states and District of Columbia in the map. Alaska and Hawaii are included. U.S. territories are not visualized here. Missing reports are shown as missing—not as zero. Counts are not a guarantee of every currently active location. No Google Places data are harvested or stored.</p>
+      </div><p class="source-fine"><b>Education:</b> High-school diploma and bachelor's attainment measure adults age 25+, not current students, school performance, test scores or four-year cohort graduation rates. No standardized county school-rating or test-score dataset has been verified for this map. <b>Military:</b> Civilian veterans are former military personnel; these figures are not a count or percentage of people newly joining the armed forces. <b>Business:</b> CBP small establishments have 1–4 paid employees, nonemployers have no paid employees, BDS establishment births are newly opened employer locations, and self-employment includes incorporated and unincorporated workers. These measures are different, and not equivalent to firm startup counts. ACS five-year estimates represent 2020–24; suppressed and missing values are not treated as zero. For percentages, aggregate summaries pool county numerators and denominators. The household-income summary is a median of county medians, not the national median income.</p>
+<p class="source-fine">Coverage: the 50 states and District of Columbia in the map. Alaska and Hawaii are included. U.S. territories are not visualized here. Missing reports are shown as missing—not as zero. Counts are not a guarantee of every currently active location. No Google Places data are harvested or stored.</p>
+      <div class="source-grid" aria-label="Additional datasets">
+        <article><span>05 / INCOME & ATTAINMENT</span><h3>ACS education and income</h3><p>Census ACS 2024 five-year county data on educational attainment, median household income and veteran status.</p><a href="https://api.census.gov/data/2024/acs/acs5/profile/variables.html" target="_blank" rel="noopener">Census ACS variables ↗</a></article>
+        <article><span>06 / SELF-EMPLOYMENT</span><h3>Workforce structure</h3><p>ACS class-of-worker table B24080. Self-employed resident workers in incorporated and unincorporated businesses are divided by employed workers.</p><a href="https://api.census.gov/data/2024/acs/acs5/groups/B24080.html" target="_blank" rel="noopener">Class-of-worker table ↗</a></article>
+        <article><span>07 / SMALL BUSINESS</span><h3>CBP and Nonemployer Statistics</h3><p>2023 employer establishments with 1–4 employees and 2024 businesses without paid employees (nonemployers).</p><a href="https://www.census.gov/data/developers/data-sets/nonemp-api/2024.html" target="_blank" rel="noopener">Nonemployer statistics ↗</a></article>
+        <article><span>08 / STARTUP ACTIVITY</span><h3>Establishment births</h3><p>2023 Business Dynamics Statistics: new employer establishments during the prior 12 months, not new firms or unique entrepreneurs.</p><a href="https://www.census.gov/programs-surveys/bds.html" target="_blank" rel="noopener">Business Dynamics Statistics ↗</a></article>
+      </div>
     </section>
   </main>
   <footer>Random Questions · Independent analytics <a href="../">← All projects</a></footer>
