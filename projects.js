@@ -73,5 +73,16 @@ window.RQ_PROJECTS = [
     searchKeywords: ['draft', 'football', 'basketball', 'draft picks', 'player grades', 'career quality', 'draft value', 'steals', 'busts'],
     url: 'https://randomquestions-projects.github.io/draft-reports/',
     theme: 'football'
+  },
+  {
+    id: 'county-atlas',
+    title: 'CountyScope · Churches & Schools',
+    shortName: 'CS',
+    domain: 'U.S. COUNTY GEOGRAPHY',
+    description: 'Explore how religious congregations and public or private schools are distributed across America in an interactive county-by-county map.',
+    categories: ['Demographics', 'Geography'],
+    searchKeywords: ['churches', 'congregations', 'schools', 'public', 'private', 'religion census', 'NCES', 'counties', 'map', 'choropleth'],
+    url: 'https://randomquestions-projects.github.io/county-atlas/',
+    theme: 'default'
   }
 ];
