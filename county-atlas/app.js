@@ -39,8 +39,8 @@ async function counts(kind) {
  const outStats=JSON.stringify([{statisticType:'count',onStatisticField:'OBJECTID',outStatisticFieldName:'cnt'}]);
  let offset=0,pages=0,matched=new Map();
  while(true){
-  const rows=await service(sources[kind],{where:'1=1',groupByFieldsForStatistics:'CNTY',outStatistics:outStats,orderByFields:'CNTY',returnGeometry:'false',resultOffset:String(offset),resultRecordCount:'2000'});
-  rows.forEach(f=>{const a=f.attributes||{};if(/^\d{1,5}$/.test(String(a.CNTY)))matched.set(fips(a.CNTY),Number(a.cnt));});
+  const rows=await service(sources[kind],{where:'1=1',groupByFieldsForStatistics:'STFIP,CNTY',outStatistics:outStats,orderByFields:'STFIP,CNTY',returnGeometry:'false',resultOffset:String(offset),resultRecordCount:'2000'});
+  rows.forEach(f=>{const a=f.attributes||{},county=String(a.CNTY||''),st=String(a.STFIP||'');if(/^\d{1,5}$/.test(county)){const code=county.length<=3&&/^\d{1,2}$/.test(st)?st.padStart(2,'0')+county.padStart(3,'0'):fips(county);matched.set(code,Number(a.cnt));}});
   offset+=rows.length;pages++;
   if(rows.length<2000||pages>=10)break;
  }
@@ -150,7 +150,7 @@ async function loadDirectory(){
    const b=d3.geoBounds(S.selected);
    fields={where:'1=1',geometry:JSON.stringify({xmin:b[0][0],ymin:b[0][1],xmax:b[1][0],ymax:b[1][1],spatialReference:{wkid:4326}}),geometryType:'esriGeometryEnvelope',spatialRel:'esriSpatialRelIntersects',inSR:'4326',outSR:'4326',returnGeometry:'true',outFields:'NAME,STREET,CITY,STATE,ZIP,FID'};
   } else {
-   fields={where:"CNTY='"+fips(S.selected.id)+"'",returnGeometry:'false',outFields:S.dirKind==='public'?'NAME,STREET,CITY,STATE,ZIP,NCESSCH':'NAME,STREET,CITY,STATE,ZIP,PPIN'};
+   fields={where:"(CNTY='"+fips(S.selected.id)+"' OR (STFIP='"+String(S.selected.id).slice(0,2)+"' AND CNTY='"+String(S.selected.id).slice(2)+"'))",returnGeometry:'false',outFields:S.dirKind==='public'?'NAME,STREET,CITY,STATE,ZIP,NCESSCH':'NAME,STREET,CITY,STATE,ZIP,PPIN'};
   }
   let list=[],offset=0;
   for(let page=0;page<20;page++){
