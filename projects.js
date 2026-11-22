@@ -79,9 +79,9 @@ window.RQ_PROJECTS = [
     title: 'CountyScope · Churches & Schools',
     shortName: 'CS',
     domain: 'U.S. COUNTY GEOGRAPHY',
-    description: 'Explore how religious congregations and public or private schools are distributed across America in an interactive county-by-county map.',
+    description: 'Explore county choropleths of schools, congregations, adult education, household income, military service, small businesses and self-employment.',
     categories: ['Demographics', 'Geography'],
-    searchKeywords: ['churches', 'congregations', 'schools', 'public', 'private', 'religion census', 'NCES', 'counties', 'map', 'choropleth'],
+    searchKeywords: ['churches', 'congregations', 'schools', 'public', 'private', 'religion census', 'NCES', 'counties', 'map', 'choropleth', 'graduation', 'education', 'veterans', 'armed forces', 'household income', 'small business', 'startup', 'self employed'],
     url: 'https://randomquestions-projects.github.io/county-atlas/',
     theme: 'default'
   }
