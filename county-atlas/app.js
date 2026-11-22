@@ -14,7 +14,7 @@ const titles={churches:'Religious congregations by county',schools:'All K–12 s
 const names={churches:'Reported congregations',schools:'Recorded K–12 schools',public:'Public K–12 schools',private:'Private K–12 schools',ratio:'Schools per 100 congregations',congregations_ratio:'Congregations per 100 schools'};
 const colors=['#e4f2eb','#bfdfd2','#9bcdbd','#76b5a4','#519b8b','#277d6f','#165b50'];
 for(const [key,meta] of Object.entries(E.metrics)){titles[key]=meta.title;names[key]=meta.label;}
-const countTypes=new Set(['churches','schools','public','private','veterans','microbusiness','nonemployer','startups']);
+const countTypes=new Set(['churches','schools','public','private','veterans','microbusiness','nonemployer','startups','armed_forces']);
 const canNormalize=()=>countTypes.has(S.variable),isExtra=()=>Object.hasOwn(E.metrics,S.variable);
 const S={features:[], stateFeatures:[],stateNames:new Map(),rows:new Map(),selected:null,variable:'churches',mode:'count',stateId:'',search:'',rankLimit:30,dirKind:'public',dirItems:[],dirLimit:35,dirCache:new Map(),dirTicket:0,ready:{public:false,private:false,churches:false,population:false},pending:4,errors:[]};
 let svg,projection,path,zoom,topology,countyGroup;
@@ -150,6 +150,7 @@ function renderSide(){
  ['selected-hs',r?.highschool==null?'—':r.highschool.toFixed(1)+'%'],
  ['selected-college',r?.college==null?'—':r.college.toFixed(1)+'%'],
  ['selected-veterans',fmt(r?.veterans)],
+ ['selected-military',fmt(r?.armed_forces)],
  ['selected-self',r?.self_employed==null?'—':r.self_employed.toFixed(1)+'%'],
  ['selected-nonemp',fmt(r?.nonemployer)]]){const element=$(id);if(element)element.textContent=value;}
  $('open-directory').disabled=!f;
