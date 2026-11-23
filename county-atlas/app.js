@@ -133,7 +133,7 @@ function renderMap(){
  }else if(isExtra() && E.metrics[S.variable].kind==='rate'){
   const values=rows.map(r=>r[S.variable]).filter(Number.isFinite);
   $('total').textContent=values.length?d3.median(values).toFixed(1):'—';
-  $('total-label').textContent='Median of reporting county death rates per 100K · not national rate';
+  $('total-label').textContent='Median reporting county rate · not an aggregate national rate';
   $('county-coverage').textContent=fmt(values.length)+' counties reporting';
  }else if(isExtra() && E.metrics[S.variable].kind==='money'){
   const values=rows.map(r=>r.income).filter(n=>n!=null&&Number.isFinite(n));
@@ -192,7 +192,7 @@ function renderSide(){
   const ids=['race_white_nh','race_black_nh','ethnicity_hispanic','race_asian_nh','race_multiracial_nh',
    'health_obesity','health_diabetes','health_depression','health_smoking','health_inactivity',
    'health_poor_mental','mortality_homicide','mortality_firearm_homicide',
-   'mortality_suicide','mortality_overdose'];
+   'mortality_suicide','mortality_overdose','violent_crime_rate','juvenile_delinquency_rate'];
   for(const id of ids){
    const meta=E.metrics[id];if(!meta||!E.ready[meta.group])continue;
    const slot=document.createElement('div'),caption=document.createElement('span'),value=document.createElement('b');
