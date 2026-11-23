@@ -365,18 +365,21 @@ function highlightLabel(){
  setNode('rel-selected-values',row?METRICS[state.x].label+': '+fmt(state.x,row.x)+' · '+METRICS[state.y].label+': '+fmt(state.y,row.y):selectedFeature?'No complete X/Y pair for this county':'Click a dot or county to inspect its values');
 }
 function activeTab(tab){
- const relationships=tab==='relationships';
- $('relationships-view').hidden=!relationships;
- $('county-map-view').hidden=relationships;
- $('cs-tab-map').setAttribute('aria-selected',String(!relationships));
- $('cs-tab-relationships').setAttribute('aria-selected',String(relationships));
- if(relationships)render();
+ for(const [view,btn,name] of [['county-map-view','cs-tab-map','map'],
+  ['relationships-view','cs-tab-relationships','relationships'],
+  ['nature-view','cs-tab-nature','nature']]){
+  const active=tab===name;
+  $(view).hidden=!active;
+  $(btn).setAttribute('aria-selected',String(active));
+ }
+ if(tab==='relationships')render();
+ if(tab==='nature')window.CountyNature?.init?.();
 }
 function bind(){
- const tabs=[['cs-tab-map','map'],['cs-tab-relationships','relationships']];
+ const tabs=[['cs-tab-map','map'],['cs-tab-relationships','relationships'],['cs-tab-nature','nature']];
  tabs.forEach(([id,tab])=>$(id).addEventListener('click',()=>{
   activeTab(tab);
-  if(window.history?.replaceState)window.history.replaceState(null,'',tab==='relationships'?'#relationships':'#county-map-view');
+  if(window.history?.replaceState)window.history.replaceState(null,'',tab==='relationships'?'#relationships':tab==='nature'?'#nature':'#county-map-view');
  }));
  const map={
   'rel-mode':['mode',v=>v],
@@ -412,6 +415,7 @@ function init({features,rows:rowMap,topology,stateNames,selectCounty}){
  state.selectCounty=selectCounty;state.initialized=true;
  populate();bind();
  if(location.hash==='#relationships')activeTab('relationships');
+ else if(location.hash==='#nature')activeTab('nature');
  else activeTab('map');
  render();
 }
