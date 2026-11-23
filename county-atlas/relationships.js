@@ -43,7 +43,7 @@ for(const [id,key] of [['seda_achievement','seda_achievement'],['seda_math','sed
 // All verified new county metrics participate in scatterplots, bivariate maps,
  // adjusted regression and correlation matrices alongside existing measures.
 for(const [id,info] of Object.entries(E.metrics)){
- if(!['race','places','mortality'].includes(info.group))continue;
+ if(!['race','places','mortality','chrr'].includes(info.group))continue;
  METRICS[id]={label:info.label,unit:info.kind==='percent'?'percent':'rate',
               year:info.year,get:r=>r[id]};
 }
@@ -60,7 +60,7 @@ const name=f=>(f.properties?.name||'County')+', '+(state.stateNames?.get(String(
 const available=id=>{
  if(!id||!METRICS[id])return false;
  if(id.startsWith('seda_'))return E.ready.seda===true;
- if(E.metrics[id]&&['race','places','mortality'].includes(E.metrics[id].group))return E.ready[E.metrics[id].group]===true;
+ if(E.metrics[id]&&['race','places','mortality','chrr'].includes(E.metrics[id].group))return E.ready[E.metrics[id].group]===true;
  if(['college','highschool','income','veteran_share','veterans_per_10k'].includes(id))return E.ready.acs===true;
  if(id.startsWith('armed_forces'))return E.ready.military===true;
  if(id==='self_employed')return E.ready.self===true;
