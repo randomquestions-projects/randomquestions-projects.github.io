@@ -48,6 +48,24 @@
           <div class="class-stats"><div><strong id="count-picks">—</strong><span>SELECTIONS SHOWN</span></div><div><strong id="count-rated">0</strong><span>CAREERS GRADED</span></div><div><strong id="count-rounds">1/7</strong><span>ROUND SELECTED</span></div></div>
         </div>
 
+        <section id="cohort-panel" class="cohort-panel" aria-labelledby="cohort-title">
+          <div class="cohort-intro">
+            <div><div class="small-kicker">THE DRAFT CLASS REPORT</div><h3 id="cohort-title">Depth and greatness<span class="accent">.</span></h3>
+              <p>Two separate, draft-position-independent scores for the entire class and your selected round. Depth rewards sustained contributors and longevity; greatness rewards elite careers and major honors.</p></div>
+          </div>
+          <div id="cohort-cards" class="cohort-cards" aria-live="polite"></div>
+          <div class="cohort-honors-header">
+            <div><h4>Accolades &amp; achievements</h4><p>Select an honor to see every player from the draft or selected round who earned it.</p></div>
+            <div class="cohort-scope" role="group" aria-label="Accolade scope">
+              <button id="honors-class" type="button" aria-pressed="false">Entire class</button>
+              <button id="honors-round" type="button" aria-pressed="true">Round <span id="honors-round-number">1</span></button>
+            </div>
+          </div>
+          <div id="honors-metrics" class="honors-metrics"></div>
+          <div id="honors-roster" class="honors-roster" aria-live="polite"></div>
+          <p class="cohort-caveat">Scores compare complete-career outcomes to historical draft-class and round benchmarks (2000–2017), never to draft slot. 2018–2021 scores are provisional; newer classes remain ungraded. Championship counts indicate champion-team season-roster association, not independently verified rings or Finals participation.</p>
+        </section>
+
         <div class="table-controls"><div class="table-title"><span class="table-icon">≡</span><strong>Draft board</strong><span class="table-count" id="visible-count">— picks</span></div><div class="legend"><span class="legend-dot"></span> Sort by pick, quality or value · select a player for details</div></div>
         <div class="table-scroll"><table class="draft-table"><thead><tr><th scope="col">PICK</th><th scope="col">PLAYER</th><th scope="col">DRAFTED BY</th><th scope="col">QUALITY <span title="Career quality independent of selection number">ⓘ</span></th><th scope="col">CAREER PACE <span title="Annualized performance vs career-stage peers">ⓘ</span></th><th scope="col">DRAFT GRADE <span title="Value relative to draft expectations">ⓘ</span></th><th scope="col"><span class="sr-only">Profile</span></th></tr></thead><tbody id="draft-rows"></tbody></table></div>
         <div id="empty-state" class="empty-state" hidden><div class="empty-icon">◇</div><h3 id="empty-title">This draft class is on the way.</h3><p id="empty-message">NFL and NBA 2000–2026 draft history is available.</p><button id="empty-reset" type="button">View available draft <span aria-hidden="true">↗</span></button></div>
