@@ -89,11 +89,27 @@ async function init(){
   }
   for(const id of ['trend-metric','trend-from','trend-to','trend-state','trend-sort'])
    $(id).addEventListener('change',render);
+  $('trend-data-unavailable').hidden=true;
+  $('trend-svg').hidden=false;
   status.textContent='ACS history: '+incoming.years.join(', ')+' · '+records.size.toLocaleString()+' county identities';
   render();
  }catch(e){
-  status.textContent=e.message||'Historical county series unavailable';
-  $('trend-warning').textContent='Historical observations were not verified or published; no synthetic change rankings are displayed.';
+  status.textContent='Unavailable on public GitHub Pages';
+  const missing=$('trend-data-unavailable');
+  if(missing)missing.hidden=false;
+  $('trend-svg').hidden=true;
+  $('trend-warning').textContent='The 2014, 2019 and 2024 ACS history is stored in the private CountyScope repository; the public site cannot load it.';
+  for(const id of ['trend-metric','trend-from','trend-to','trend-state','trend-sort']){
+   const el=$(id);
+   if(el)el.disabled=true;
+  }
+  $('trend-coverage').textContent='Private dataset';
+  $('trend-rankings').replaceChildren();
+  const row=document.createElement('tr'),cell=document.createElement('td');
+  cell.colSpan=4;
+  cell.textContent='Historical metrics are unavailable on this public site; no estimates or rankings are fabricated.';
+  row.append(cell);
+  $('trend-rankings').append(row);
   data=null;
  }
 }
