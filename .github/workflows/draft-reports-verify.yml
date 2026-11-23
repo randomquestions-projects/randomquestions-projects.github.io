@@ -23,6 +23,46 @@ jobs:
           node-version: '22'
       - name: Check frontend JavaScript syntax
         run: node --check draft-reports/app.js
+      - name: Verify class and round depth/greatness aggregates
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('draft-reports/data')
+          data=json.loads((root/'cohort_summaries.json').read_text())
+          assert data['schema_version']==1 and data['method']=='cohort-depth-greatness-v1'
+          assert set(data['leagues'])=={'NFL','NBA'}
+          assert data['model_versions']=={'NFL':'nfl-draft-v3','NBA':'nba-draft-v2'}
+          total=0
+          for league,years in data['leagues'].items():
+              assert set(years)=={str(y) for y in range(2000,2027)}
+              for year,groups in years.items():
+                  year=int(year)
+                  draft=json.loads((root/league.lower()/f'{year}.json').read_text())
+                  assert draft['model_version']==data['model_versions'][league]
+                  players=draft['picks']
+                  summary=groups['draft']
+                  assert summary['picks']==len(players)
+                  assert len(groups['rounds'])==(7 if league=='NFL' else 2)
+                  assert sum(r['picks'] for r in groups['rounds'])==len(players)
+                  for row,picks in [(summary,players),*[(g,[p for p in players if p['round']==g['round']]) for g in groups['rounds']]]:
+                      total+=1
+                      assert row['picks']==len(picks)
+                      assert row['status']==('mature' if year<=2017 else 'provisional' if year<=2021 else 'developing')
+                      for dim in ('depth','greatness'):
+                          score=row[dim]['score']
+                          if year>=2022: assert score is None and row[dim]['grade'] is None
+                          else: assert isinstance(score,(int,float)) and 0<=score<=100 and row[dim]['grade']
+                      for key,counts in row['award_totals'].items():
+                          actual=[max(0,int((p.get('career') or {}).get('awards',{}).get(key,0) or 0)) for p in picks]
+                          assert counts['players']==sum(v>0 for v in actual),(league,year,key,'players')
+                          assert counts['selections']==sum(actual),(league,year,key,'selections')
+          assert total==297,total
+          page=(root.parent/'index.html').read_text()
+          for required_id in ('cohort-cards','honors-class','honors-round','honors-metrics','honors-roster'):
+              assert f'id="{required_id}"' in page
+          print(f'Validated {total} class and round scorecards and award totals against published draft data.')
+          PY
       - name: Verify all NFL draft exports, ratings and licensing fields
         run: |
           python3 - <<'PY'
