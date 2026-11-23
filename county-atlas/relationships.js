@@ -49,7 +49,7 @@ const state={features:[],topology:null,rows:null,selectCounty:null,selected:null
  x:'college',y:'armed_forces_share',color:'income',mode:'scatter',state:'',minimum:0,weight:false,
  control:'income',control2:'',moderator:'',showPop:true,points:[],lastAssess:null,scatter:null,map:null};
 const get=f=>(state.rows&&state.rows.get(String(f.id)))||{};
-const name=f=>(f.properties?.name||'County')+', '+(state.stateNames?.get(String(f.id).slice(0,2))||'Unknown state');
+const name=f=>(f.properties?.name||'County')+', '+(state.stateNames?.get(String(f.id).slice(0,2))?.name||'Unknown state');
 const available=id=>{
  if(!id||!METRICS[id])return false;
  if(id.startsWith('seda_'))return E.ready.seda===true;
@@ -92,7 +92,7 @@ function populate(){
  for(const [id,val] of Object.entries(def))$(id).value=id==='rel-color'&&val==='none'?'':val;
  const sel=$('rel-state');
  sel.replaceChildren(mkOpt('','All states'));
- [...state.stateNames].sort((a,b)=>a[1].localeCompare(b[1])).forEach(([id,label])=>sel.append(mkOpt(id,label)));
+ [...state.stateNames].sort((a,b)=>a[1].name.localeCompare(b[1].name)).forEach(([id,item])=>sel.append(mkOpt(id,item.name)));
 }
 function updateOptions(){
  for(const id of ['rel-x','rel-y','rel-color','rel-control','rel-control2','rel-moderator']){
@@ -319,7 +319,7 @@ function render(){
  const points=rows(),a=engine.assess(points);
  state.points=points;state.lastAssess=a;
  setNode('rel-counties',normal(points.length));
- setNode('rel-pearson',readable(a.pearson));
+ setNode('rel-pearson',readable(state.weight?a.weightedPearson:a.pearson));
  setNode('rel-spearman',readable(a.spearman));
  setNode('rel-r2',readable(a.r2));
  const wait=E.pending>0;
