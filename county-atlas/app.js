@@ -37,7 +37,7 @@ const congregationsPer100Schools = r => {
 };
 const compare = r => !r?null:S.variable==='schools'?schoolTotal(r):S.variable==='ratio'?schoolsPer100(r):S.variable==='congregations_ratio'?congregationsPer100Schools(r):r[S.variable];
 function val(r) { if(!r)return null;const n=compare(r);return n==null||!Number.isFinite(n)?null:canNormalize()&&S.mode==='rate'?(r.population>0?n*10000/r.population:null):n; }
-const presentation=n=>n==null||!Number.isFinite(n)?'—':isSeda()?(n>0?'+':'')+n.toFixed(2)+' SD':E.metrics[S.variable]?.kind==='money'?'$'+fmt(n):E.metrics[S.variable]?.kind==='percent'?n.toFixed(1)+'%':E.metrics[S.variable]?.kind==='rate'?n.toFixed(1):E.metrics[S.variable]?.kind==='score'?n.toFixed(1):isRatio()||(canNormalize()&&S.mode==='rate')?n.toFixed(1):fmt(n);
+const presentation=n=>n==null||!Number.isFinite(n)?'—':isSeda()?(n>0?'+':'')+n.toFixed(2)+' SD':E.metrics[S.variable]?.kind==='money'?'$'+fmt(n):E.metrics[S.variable]?.kind==='percent'?n.toFixed(1)+'%':E.metrics[S.variable]?.kind==='rate'?n.toFixed(1):E.metrics[S.variable]?.kind==='score'?n.toFixed(1):E.metrics[S.variable]?.kind==='number'?(Math.abs(n)<100?n.toFixed(2):fmt(n)):isRatio()||(canNormalize()&&S.mode==='rate')?n.toFixed(1):fmt(n);
 function acceptable(f) { return (!S.stateId||String(f.id).startsWith(S.stateId))&&(!S.search||(full(f)+' '+f.id).toLowerCase().includes(S.search)); }
 async function fetchData(url,timeout=35000) {
  const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);
@@ -131,7 +131,7 @@ function renderMap(){
     $('total-label').textContent='Median reporting county · not a national population-weighted prevalence';
     $('county-coverage').textContent=fmt(values.length)+' counties reporting';
   }
- }else if(isExtra() && ['rate','score'].includes(E.metrics[S.variable].kind)){
+ }else if(isExtra() && ['rate','score','number'].includes(E.metrics[S.variable].kind)){
   const values=rows.map(r=>r[S.variable]).filter(Number.isFinite);
   $('total').textContent=values.length?d3.median(values).toFixed(1):'—';
   $('total-label').textContent='Median reporting county rate · not an aggregate national rate';
@@ -365,7 +365,7 @@ async function main(){
  else tasks.push(population().catch(e=>S.errors.push('Census: '+e.message)).finally(()=>{S.pending--;renderMap();}));
  S.pending--;if(!S.ready.churches)S.errors.push('USRC county summary not yet published');
  renderMap();
- await Promise.allSettled([...tasks,E.load(S.rows,()=>renderMap()),E.loadTree(S.rows,()=>renderMap())]);
+ await Promise.allSettled([...tasks,E.load(S.rows,()=>renderMap()),E.loadTree(S.rows,()=>renderMap()),E.loadCHRR(S.rows,()=>renderMap())]);
  if(!S.ready.churches&&(S.ready.public||S.ready.private)){
   $('variable').value='schools';S.variable='schools';renderMap();
  }
