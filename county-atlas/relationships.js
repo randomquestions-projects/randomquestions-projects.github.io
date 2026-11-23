@@ -60,7 +60,7 @@ const name=f=>(f.properties?.name||'County')+', '+(state.stateNames?.get(String(
 const available=id=>{
  if(!id||!METRICS[id])return false;
  if(id.startsWith('seda_'))return E.ready.seda===true;
- if(E.metrics[id]&&['race','places','mortality','chrr'].includes(E.metrics[id].group))return E.ready[E.metrics[id].group]===true && (!E.fieldCoverage||E.fieldCoverage[id]>0);
+ if(E.metrics[id]&&['race','places','places_all','mortality','chrr','tes','chrr_full'].includes(E.metrics[id].group))return E.ready[E.metrics[id].group]===true && (!E.fieldCoverage||E.fieldCoverage[id]>0);
  if(['college','highschool','income','veteran_share','veterans_per_10k'].includes(id))return E.ready.acs===true;
  if(id.startsWith('armed_forces'))return E.ready.military===true;
  if(id==='self_employed')return E.ready.self===true;
@@ -365,18 +365,23 @@ function highlightLabel(){
  setNode('rel-selected-values',row?METRICS[state.x].label+': '+fmt(state.x,row.x)+' · '+METRICS[state.y].label+': '+fmt(state.y,row.y):selectedFeature?'No complete X/Y pair for this county':'Click a dot or county to inspect its values');
 }
 function activeTab(tab){
- const relationships=tab==='relationships';
- $('relationships-view').hidden=!relationships;
- $('county-map-view').hidden=relationships;
- $('cs-tab-map').setAttribute('aria-selected',String(!relationships));
- $('cs-tab-relationships').setAttribute('aria-selected',String(relationships));
- if(relationships)render();
+ for(const [view,btn,name] of [['county-map-view','cs-tab-map','map'],
+  ['relationships-view','cs-tab-relationships','relationships'],
+  ['nature-view','cs-tab-nature','nature'],
+  ['trends-view','cs-tab-trends','trends']]){
+  const active=tab===name;
+  $(view).hidden=!active;
+  $(btn).setAttribute('aria-selected',String(active));
+ }
+ if(tab==='relationships')render();
+ if(tab==='nature')window.CountyNature?.init?.();
+ if(tab==='trends')window.CountyTrends?.init?.();
 }
 function bind(){
- const tabs=[['cs-tab-map','map'],['cs-tab-relationships','relationships']];
+ const tabs=[['cs-tab-map','map'],['cs-tab-relationships','relationships'],['cs-tab-nature','nature'],['cs-tab-trends','trends']];
  tabs.forEach(([id,tab])=>$(id).addEventListener('click',()=>{
   activeTab(tab);
-  if(window.history?.replaceState)window.history.replaceState(null,'',tab==='relationships'?'#relationships':'#county-map-view');
+  if(window.history?.replaceState)window.history.replaceState(null,'',tab==='relationships'?'#relationships':tab==='nature'?'#nature':tab==='trends'?'#trends':'#county-map-view');
  }));
  const map={
   'rel-mode':['mode',v=>v],
@@ -412,11 +417,20 @@ function init({features,rows:rowMap,topology,stateNames,selectCounty}){
  state.selectCounty=selectCounty;state.initialized=true;
  populate();bind();
  if(location.hash==='#relationships')activeTab('relationships');
+ else if(location.hash==='#nature')activeTab('nature');
+ else if(location.hash==='#trends')activeTab('trends');
  else activeTab('map');
  render();
 }
 function refresh(){
  if(!state.initialized)return;
+ let added=false;
+ for(const [id,info] of Object.entries(E.metrics)){
+  if(!['places_all','chrr_full'].includes(info.group)||Object.hasOwn(METRICS,id))continue;
+  METRICS[id]={label:info.label,unit:info.kind==='percent'?'percent':'number',year:info.year,get:r=>r[id]};
+  added=true;
+ }
+ if(added)populate();
  updateOptions();render();
 }
 window.CountyRelationships={init,refresh,highlightCounty,metrics:METRICS};

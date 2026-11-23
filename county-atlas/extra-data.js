@@ -44,8 +44,10 @@ mortality_suicide:{title:'Suicide deaths by county of residence',label:'Suicide 
 mortality_overdose:{title:'Drug overdose deaths by county of residence',label:'Drug overdose deaths / 100K',kind:'rate',year:'CDC NVSS · annual, sometimes modeled',group:'mortality'},
 mortality_firearm:{title:'Firearm injury deaths by county of residence',label:'All firearm deaths / 100K',kind:'rate',year:'CDC NVSS · annual, sometimes modeled',group:'mortality'},
 juvenile_delinquency_rate:{title:'Juvenile delinquency court case rate (not crimes against children)',label:'Juvenile delinquency cases / 1K youth',kind:'rate',year:'2024 CHR release · historical juvenile cases',group:'chrr'},
+tree_equity_score:{title:'Urban Tree Equity Score (population-weighted)',label:'Urban Tree Equity Score · 0–100',kind:'score',year:'American Forests · urban block groups only',group:'tes'},
+urban_tree_canopy_pct:{title:'Tree canopy coverage in urban block groups',label:'Urban tree canopy (%)',kind:'percent',year:'American Forests · urban block groups only',group:'tes'},
 };
-const ready={acs:false,self:false,cbp:false,nonemp:false,bds:false,military:false,race:false,places:false,mortality:false,chrr:false};
+const ready={acs:false,self:false,cbp:false,nonemp:false,bds:false,military:false,race:false,places:false,mortality:false,chrr:false,tes:false,chrr_full:false};
 const errors={};
 const sourceLabels={};
  const fieldCoverage={};
@@ -60,10 +62,11 @@ const GROUP_FIELDS={
  race:['race_white_nh','race_black_nh','race_native_nh','race_asian_nh','race_pacific_nh','race_other_nh','race_multiracial_nh','ethnicity_hispanic'],
  places:['health_obesity','health_diabetes','health_depression','health_smoking','health_inactivity','health_short_sleep','health_poor_mental','health_binge_drinking','health_food_insecurity'],
  mortality:['mortality_homicide','mortality_firearm_homicide','mortality_suicide','mortality_overdose','mortality_firearm'],
- chrr:['juvenile_delinquency_rate']
+ chrr:['juvenile_delinquency_rate'],
+ tes:['tree_equity_score','urban_tree_canopy_pct','urban_bg_population','urban_bg_count']
 };
-const PERCENT_FIELDS=new Set(['highschool','college','veteran_share','armed_forces_share','self_employed',...GROUP_FIELDS.race,...GROUP_FIELDS.places]);
-const COUNTY_LIMITS={acs:2900,military:1800,self:1800,cbp:1800,nonemp:1800,bds:1800,race:2900,places:2800,mortality:1500,chrr:250};
+const PERCENT_FIELDS=new Set(['highschool','college','veteran_share','armed_forces_share','self_employed','urban_tree_canopy_pct',...GROUP_FIELDS.race,...GROUP_FIELDS.places]);
+const COUNTY_LIMITS={acs:2900,military:1800,self:1800,cbp:1800,nonemp:1800,bds:1800,race:2900,places:2800,places_all:100,mortality:1500,chrr:250,tes:500};
 function validValue(field,value){
  if(value===null)return null;
  if(typeof value!=='number'||!Number.isFinite(value)||value<0)return undefined;
@@ -81,6 +84,34 @@ async function load(rows,render){
   const data=await response.json();
   if(data.version!==1||data.dataset!=='CountyScope verified Census county aggregates'||!Array.isArray(data.counties)||data.counties.length<3050||!data.sources||typeof data.sources!=='object')
      throw Error('County metrics snapshot schema or national coverage invalid');
+  // Only metadata from the validated private CDC publisher can add new
+  // source-derived measures. No HTML, arbitrary fields or browser API tokens.
+  const extended=data.catalog&&typeof data.catalog==='object'?data.catalog:{};
+  const fromCatalog=[];
+  const group=typeof document!=='undefined'?document.getElementById('variable')?.querySelector('optgroup[label="Public health · CDC PLACES 2025, modeled"]'):null;
+  for(const [field,meta] of Object.entries(extended)){
+   if(!/^places_[a-z][a-z0-9_]{2,23}$/.test(field)||!meta||meta.group!=='places_all'||
+       meta.kind!=='percent'||typeof meta.label!=='string'||meta.label.length>180||
+       !Number.isInteger(meta.coverage)||meta.coverage<100)continue;
+   if(!Object.hasOwn(metrics,field)){
+    metrics[field]={title:meta.label+' by county',label:meta.label,
+     kind:'percent',year:'2025 CDC PLACES · modeled',group:'places_all'};
+   }
+   PERCENT_FIELDS.add(field);
+   fromCatalog.push(field);
+   if(group&&![...group.querySelectorAll('option')].some(x=>x.value===field)){
+    const choice=document.createElement('option');
+    choice.value=field;
+    choice.textContent=meta.label+' (%)';
+    choice.disabled=true;
+    group.append(choice);
+   }
+  }
+  if(fromCatalog.length){
+    GROUP_FIELDS.places_all=fromCatalog;
+    // The group is valid only when the publisher explicitly declares it.
+    if(!data.sources.places_all)throw Error('Missing provenance for expanded PLACES metrics');
+  }
   const seen=new Set(), staging=new Map();
   for(const entry of data.counties){
    if(!entry||typeof entry.fips!=='string'||!/^\d{5}$/.test(entry.fips)||seen.has(entry.fips))
@@ -141,5 +172,109 @@ async function load(rows,render){
   render();
  }
 }
-window.CountyExtras={metrics,ready,errors,sourceLabels,fieldCoverage,load,get pending(){return pending;}};
+
+async function loadTree(rows,render){
+ try{
+  const response=await fetch('data/tree-equity.json',{cache:'no-store'});
+  if(!response.ok)return;
+  const data=await response.json();
+  if(data.version!==1||data.dataset!=='CountyScope urban Tree Equity Score from American Forests'||
+    !Array.isArray(data.counties)||data.counties.length<500||
+    typeof data.year!=='number'||!data.method||!String(data.source).startsWith('https://www.treeequityscore.org/'))
+    throw Error('Unverified American Forests county aggregate');
+  const seen=new Set(),staged=[];
+  for(const row of data.counties){
+   if(!row||typeof row.fips!=='string'||!/^\d{5}$/.test(row.fips)||seen.has(row.fips))
+    throw Error('Invalid Tree Equity county FIPS');
+   seen.add(row.fips);
+   if(!rows.has(row.fips))continue;
+   if(!Number.isFinite(row.tree_equity_score)||row.tree_equity_score<0||row.tree_equity_score>100||
+     !Number.isFinite(row.urban_bg_count)||row.urban_bg_count<2)
+    throw Error('Invalid urban Tree Equity value');
+   if(row.urban_tree_canopy_pct!=null&&(!Number.isFinite(row.urban_tree_canopy_pct)||
+       row.urban_tree_canopy_pct<0||row.urban_tree_canopy_pct>100))
+    throw Error('Invalid canopy percentage');
+   staged.push(row);
+  }
+  if(staged.length<500)throw Error('Insufficient urban Tree Equity county coverage');
+  for(const row of staged){
+   const target=rows.get(row.fips);
+   for(const field of GROUP_FIELDS.tes)
+    if(Number.isFinite(row[field]))target[field]=row[field];
+  }
+  ready.tes=true;
+  sourceLabels.tes='American Forests Tree Equity Score '+data.year+' · urban block groups';
+  for(const field of GROUP_FIELDS.tes)
+   fieldCoverage[field]=staged.filter(row=>Number.isFinite(row[field])).length;
+  if(typeof document!=='undefined'){
+   const sel=document.getElementById('variable');
+   for(const opt of sel?.options||[])
+    if(opt.value==='tree_equity_score'||opt.value==='urban_tree_canopy_pct')
+     opt.disabled=!fieldCoverage[opt.value];
+  }
+ }catch(error){
+  errors.tes=error.message||'Tree Equity source unavailable';
+ }finally{
+  render();
+ }
+}
+
+async function loadCHRR(rows,render){
+ try{
+  const response=await fetch('data/county-chrr-2025.json',{cache:'no-store'});
+  if(!response.ok)return;
+  const data=await response.json();
+  if(data.version!==1||data.dataset!=='CountyScope CHRR 2025 source-verified county measures'||
+     !Array.isArray(data.counties)||data.counties.length<3000||
+     !data.catalog||Object.keys(data.catalog).length<35||
+     !String(data.source).startsWith('https://www.countyhealthrankings.org/'))
+    throw Error('County Health Rankings dataset failed source verification');
+  const catalog={},group=typeof document!=='undefined'?
+    document.getElementById('variable')?.querySelector('optgroup[label="County Health Rankings · 2025 release"]'):null;
+  for(const [id,meta] of Object.entries(data.catalog)){
+   if(!/^chrr_v\d{3}$/.test(id)||meta.group!=='chrr_full'||
+      meta.kind!=='number'||typeof meta.label!=='string'||meta.label.length>140||
+      !Number.isInteger(meta.coverage)||meta.coverage<100)continue;
+   catalog[id]=meta;
+  }
+  if(Object.keys(catalog).length<35)throw Error('Too few CHRR source dictionary fields');
+  const seen=new Set(),staged=new Map();
+  for(const row of data.counties){
+   if(!row||typeof row.fips!=='string'||!/^\d{5}$/.test(row.fips)||seen.has(row.fips))
+    throw Error('Invalid CHRR county FIPS');
+   seen.add(row.fips);
+   if(!rows.has(row.fips))continue;
+   const values={};
+   for(const field of Object.keys(catalog)){
+    if(!Object.prototype.hasOwnProperty.call(row,field))continue;
+    const value=row[field];
+    if(!Number.isFinite(value)||value< -10000000||value>1000000000)
+     throw Error('Invalid County Health Rankings source value');
+    values[field]=value;
+   }
+   staged.set(row.fips,values);
+  }
+  if(staged.size<2900)throw Error('Insufficient matched County Health Rankings counties');
+  for(const [id,meta] of Object.entries(catalog)){
+   const matched=[...staged.values()].filter(v=>Number.isFinite(v[id])).length;
+   if(matched<100)continue;
+   fieldCoverage[id]=matched;
+   metrics[id]={title:meta.label+' by county',label:meta.label,
+     kind:'number',year:meta.year,group:'chrr_full'};
+   if(group){
+    const option=document.createElement('option');
+    option.value=id;option.textContent=meta.label+' · source units';
+    group.append(option);
+   }
+  }
+  if(Object.keys(metrics).filter(x=>x.startsWith('chrr_v')).length<35)
+   throw Error('Insufficient populated County Health Rankings measures');
+  for(const [fips,values] of staged)Object.assign(rows.get(fips),values);
+  ready.chrr_full=true;
+  sourceLabels.chrr_full='County Health Rankings 2025 · observation years vary';
+ }catch(error){
+  errors.chrr_full=error.message||'Full County Health Rankings dataset unavailable';
+ }finally{render();}
+}
+window.CountyExtras={metrics,ready,errors,sourceLabels,fieldCoverage,load,loadTree,loadCHRR,get pending(){return pending;}};
 })();

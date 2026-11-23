@@ -14,6 +14,8 @@
 <script defer src="seda.js"></script>
 <script defer src="relationships-stats.js"></script>
 <script defer src="relationships.js"></script>
+<script defer src="nature.js"></script>
+<script defer src="trends.js"></script>
 <script defer src="app.js"></script>
 </head>
 <body>
@@ -34,6 +36,8 @@
     <nav class="cs-tabs" role="tablist" aria-label="CountyScope views">
       <button id="cs-tab-map" type="button" role="tab" aria-controls="county-map-view" aria-selected="true"><span>◈</span> County map</button>
       <button id="cs-tab-relationships" type="button" role="tab" aria-controls="relationships-view" aria-selected="false"><span>↗</span> Relationships & analysis</button>
+      <button id="cs-tab-trends" type="button" role="tab" aria-controls="trends-view" aria-selected="false"><span>↻</span> Trends &amp; movers</button>
+      <button id="cs-tab-nature" type="button" role="tab" aria-controls="nature-view" aria-selected="false"><span>♣</span> Parks & nature</button>
     </nav>
     <section id="county-map-view" class="workspace" role="tabpanel" aria-labelledby="cs-tab-map" aria-label="Interactive county map explorer">
       <div class="toolbar">
@@ -53,6 +57,11 @@
 <option value="race_other_nh">Other race, non-Hispanic (%)</option>
 <option value="ethnicity_hispanic">Hispanic / Latino, any race (%)</option>
 </optgroup>
+<optgroup label="Urban nature · American Forests Tree Equity Score">
+<option value="tree_equity_score" disabled>Urban Tree Equity Score · 0–100 (source pending)</option>
+<option value="urban_tree_canopy_pct" disabled>Urban tree canopy (%) (source pending)</option>
+</optgroup>
+<optgroup label="County Health Rankings · 2025 release"></optgroup>
 <optgroup label="Public health · CDC PLACES 2025, modeled">
 <option value="health_obesity">Adult obesity (%)</option>
 <option value="health_diabetes">Diagnosed diabetes (%)</option>
@@ -237,6 +246,68 @@
       </div>
     </section>
 
+
+
+    <section id="trends-view" class="trends-view" role="tabpanel" aria-labelledby="cs-tab-trends" hidden>
+      <div class="rel-heading"><div>
+        <div class="mini-label">CENSUS HISTORY / U.S. COUNTIES</div>
+        <h2>What has <em>changed?</em></h2>
+        <p>Compare genuine non-overlapping five-year ACS observations, plot changes across the country, and find the largest movers. Historical source years are shown rather than invented annual estimates.</p>
+      </div><span class="rel-status" id="trend-status">Loading historical data…</span></div>
+      <div class="nature-controls panel">
+        <label><span>METRIC</span><select id="trend-metric"></select></label>
+        <label><span>FROM YEAR</span><select id="trend-from"></select></label>
+        <label><span>TO YEAR</span><select id="trend-to"></select></label>
+        <label><span>STATE FIPS</span><select id="trend-state"><option value="">All states</option></select></label>
+        <label><span>BIGGEST MOVERS</span><select id="trend-sort">
+          <option value="rise">Largest increases</option><option value="fall">Largest decreases</option>
+          <option value="absolute">Largest absolute changes</option>
+        </select></label>
+      </div>
+      <p class="source-fine" id="trend-warning">Historical ACS estimates are validated by source year and geography; missing means not reported.</p>
+      <div class="nature-layout">
+        <div class="panel nature-map-card">
+          <div class="panel-title"><div><span class="mini-label">HISTORICAL COUNTY CHANGES</span><h2 id="trend-years">2009–2024</h2></div><span id="trend-coverage">—</span></div>
+          <svg id="trend-svg" viewBox="0 0 1000 610" role="img" aria-label="County change choropleth map"></svg>
+          <p class="nature-foot" id="trend-legend"></p>
+        </div>
+        <div class="panel nature-details">
+          <div class="panel-title"><div><span class="mini-label">TOP COUNTY CHANGES</span><h2>Biggest movers</h2></div><span id="trend-measure">—</span></div>
+          <div class="table-wrap trend-table"><table><thead><tr><th>County FIPS</th><th>From</th><th>To</th><th id="trend-column">Change</th></tr></thead>
+          <tbody id="trend-rankings"><tr><td colspan="4">Source validation pending</td></tr></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="nature-view" class="nature-view" role="tabpanel" aria-labelledby="cs-tab-nature" hidden>
+      <div class="rel-heading"><div>
+        <div class="mini-label">EXPLORE THE OUTDOORS / UNITED STATES</div>
+        <h2>National parks <em>&amp; nature.</em></h2>
+        <p>Explore the National Park System and related sites, from iconic national parks to monuments, historic parks and national seashores. Click a map marker or search the park directory to inspect official-source details.</p>
+      </div><span class="rel-status" id="nature-status">Loading verified park locations…</span></div>
+      <div class="nature-controls panel">
+        <label><span>PLACES TO SHOW</span><select id="nature-category">
+          <option value="national">National parks</option><option value="units">All official NPS units</option>
+          <option value="monuments">National monuments</option><option value="coastal">Coasts &amp; islands</option>
+          <option value="historic">Historic &amp; memorial sites</option><option value="all">All sites &amp; related areas</option>
+        </select></label>
+        <label><span>STATE</span><select id="nature-state"><option value="">All states</option></select></label>
+        <label><span>SEARCH</span><input id="nature-search" type="search" placeholder="Find a park…" autocomplete="off"></label>
+      </div>
+      <div class="nature-layout">
+        <section class="panel nature-map-card"><div class="panel-title"><div><span class="mini-label">NATIONAL PARK SYSTEM / REFERENCE LOCATIONS</span><h2>Explore by location</h2></div><span id="nature-count">—</span></div>
+          <svg id="nature-svg" viewBox="0 0 1000 610" role="img" aria-label="Clickable United States national park map"></svg>
+          <p class="nature-foot">Gold markers are national parks; green markers are other NPS units or related sites. Locations indicate reference coordinates, not public entrances or driving directions. Dataset is a validated CC0 aggregation from Park Atlas, derived from National Park Service records.</p>
+        </section>
+        <aside class="panel nature-details">
+          <div class="panel-title"><div><span class="mini-label">PARK SPOTLIGHT</span><h2>About this place</h2></div></div>
+          <div id="nature-selected" class="nature-selected"><p>Select a park marker.</p></div>
+          <div class="nature-list-header"><span class="mini-label">BROWSE LOCATIONS</span></div>
+          <div id="nature-results" class="nature-list"></div>
+        </aside>
+      </div>
+    </section>
+
     <section class="methodology" id="methodology"><div class="method-kicker">THE RESEARCH <span> / </span> SOURCE NOTES</div><h2>What the map measures.</h2>
       <div class="source-grid">
         <article><span>01 / RELIGION</span><h3>Congregations, not buildings</h3><p>“Congregations” refers to congregations reported by participating religious groups in the 2020 U.S. Religion Census, not just Christian churches. The figures cover multiple faith traditions and do not represent a complete directory of church buildings. Some groups do not report.</p><a href="https://www.usreligioncensus.org/interactive-tables" target="_blank" rel="noopener">U.S. Religion Census ↗</a></article>
@@ -255,6 +326,8 @@
         <article><span>11 / PUBLIC HEALTH</span><h3>CDC PLACES 2025</h3><p>County-level crude adult prevalence estimates. CDC models these using surveys and Census variables; they are not direct counts of medical diagnoses. Health-related social-needs measures do not cover every state. Missing measures are withheld, and national summaries show medians of reported counties, not national prevalence.</p><a href="https://data.cdc.gov/d/swc5-untb" target="_blank" rel="noopener">PLACES 2025 county data ↗</a></article>
         <article><span>12 / FATAL VIOLENCE &amp; INJURY</span><h3>CDC mortality by residence</h3><p>Annual NVSS homicide, firearm homicide, suicide, overdose and total firearm death rates per 100,000 residents. Source year is selected coherently by release. Small-county rates may use Bayesian smoothing to protect privacy. Not interchangeable with FBI offenses, violent crime incidence, or police use-of-force events.</p><a href="https://data.cdc.gov/d/psx4-wq38" target="_blank" rel="noopener">CDC injury and violence rates ↗</a></article>
         <article><span>13 / REPORTED CRIME</span><h3>Juvenile delinquency court cases</h3><p>2024 County Health Rankings analytic archive includes juvenile delinquency court cases per 1,000 youth. The underlying juvenile court-case years are 1997–2019, varying by state; nonparticipating locations are not treated as zero. This is not a measure of crimes against children or police-documented violent offenses.</p><a href="https://www.countyhealthrankings.org/health-data/methodology-and-sources/data-documentation" target="_blank" rel="noopener">2024 CHR analytic archive ↗</a></article>
+        <article><span>15 / TREE EQUITY</span><h3>Urban canopy &amp; equity</h3><p>American Forests Tree Equity Score describes urban census block groups, not all county land. County aggregation is weighted by the published block-group population and must show urban coverage; unverified or missing state exports stay disabled. Scores are 0–100 and should not be compared across methodology revisions without checks.</p><a href="https://www.treeequityscore.org/methodology?tab=data-download" target="_blank" rel="noopener">Official Tree Equity downloads ↗</a></article>
+        <article><span>16 / COUNTY HEALTH RANKINGS</span><h3>Full 2025 analytic catalog</h3><p>New measures are displayed only after the 2025 official analytic CSV and matching source data dictionary pass schema and coverage validation. Raw indicators have different units and underlying observation years; they are not combined as though all were percentages or made into an unvalidated composite.</p><a href="https://www.countyhealthrankings.org/health-data/methodology-and-sources/data-documentation" target="_blank" rel="noopener">2025 data and dictionary ↗</a></article>
         <article><span>14 / RESEARCH GAPS</span><h3>Police violence, crimes, kidnapping &amp; pornography usage</h3><p>Juvenile delinquency court-case rates can be displayed where the 2024 County Health Rankings national extract reports them; the underlying observations date from 1997–2019. These are not current 2026 incident counts, and juvenile delinquency does not mean children were victims. Contemporary county-level violent crime rates, FBI crime clearances, kidnappings, and crimes involving children as victims require an independently validated law-enforcement reporting crosswalk and coverage. National county-level police brutality measures lack a consistent official definition. No credible, representative public county pornography-consumption dataset has been verified. None of these are shown as invented or zero-valued layers.</p><a href="https://cde.ucr.cjis.gov/" target="_blank" rel="noopener">FBI Crime Data Explorer ↗</a></article>
       </div>
     </section>
