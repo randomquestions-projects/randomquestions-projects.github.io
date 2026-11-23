@@ -367,19 +367,21 @@ function highlightLabel(){
 function activeTab(tab){
  for(const [view,btn,name] of [['county-map-view','cs-tab-map','map'],
   ['relationships-view','cs-tab-relationships','relationships'],
-  ['nature-view','cs-tab-nature','nature']]){
+  ['nature-view','cs-tab-nature','nature'],
+  ['trends-view','cs-tab-trends','trends']]){
   const active=tab===name;
   $(view).hidden=!active;
   $(btn).setAttribute('aria-selected',String(active));
  }
  if(tab==='relationships')render();
  if(tab==='nature')window.CountyNature?.init?.();
+ if(tab==='trends')window.CountyTrends?.init?.();
 }
 function bind(){
- const tabs=[['cs-tab-map','map'],['cs-tab-relationships','relationships'],['cs-tab-nature','nature']];
+ const tabs=[['cs-tab-map','map'],['cs-tab-relationships','relationships'],['cs-tab-nature','nature'],['cs-tab-trends','trends']];
  tabs.forEach(([id,tab])=>$(id).addEventListener('click',()=>{
   activeTab(tab);
-  if(window.history?.replaceState)window.history.replaceState(null,'',tab==='relationships'?'#relationships':tab==='nature'?'#nature':'#county-map-view');
+  if(window.history?.replaceState)window.history.replaceState(null,'',tab==='relationships'?'#relationships':tab==='nature'?'#nature':tab==='trends'?'#trends':'#county-map-view');
  }));
  const map={
   'rel-mode':['mode',v=>v],
@@ -416,6 +418,7 @@ function init({features,rows:rowMap,topology,stateNames,selectCounty}){
  populate();bind();
  if(location.hash==='#relationships')activeTab('relationships');
  else if(location.hash==='#nature')activeTab('nature');
+ else if(location.hash==='#trends')activeTab('trends');
  else activeTab('map');
  render();
 }
