@@ -136,3 +136,34 @@ main{padding:0 4%}.masthead{padding:56px 0 44px;display:flex;justify-content:spa
 .county-extended .stats-split{padding:14px 0 9px;gap:15px 12px}
 .county-extended .stats-split b{font-size:16px}
 .county-extended .county-metric-notice{font-size:11px;color:#6b8578;line-height:1.6;margin-top:10px}
+
+/* National parks and nature explorer */
+.nature-view{margin-top:28px;min-width:0}
+.nature-controls{display:flex;flex-wrap:wrap;gap:12px;padding:18px 24px;margin:16px 0}
+.nature-controls label{display:flex;flex:1;min-width:160px;flex-direction:column;gap:8px}
+.nature-controls label>span{font-size:10px;letter-spacing:.065em;color:#628173;font-weight:700}
+.nature-controls select,.nature-controls input{background:#fff;border:1px solid #d9e5df;border-radius:7px;padding:11px;min-height:42px;max-width:100%;width:100%;color:#224437}
+.nature-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,325px);gap:15px;align-items:start}
+.nature-map-card{min-width:0;overflow:hidden}
+#nature-svg{width:100%;height:auto;display:block;max-height:650px;background:#f8fbf9}
+.nature-state{vector-effect:non-scaling-stroke}
+.nature-dot{cursor:pointer;transition:r .1s;outline:none}
+.nature-dot:hover,.nature-dot:focus-visible{stroke:#0e5548;stroke-width:3px}
+.nature-details{padding-bottom:12px}
+.nature-selected{padding:18px 24px;min-height:185px}
+.nature-selected h3{font-size:21px;letter-spacing:-.04em;line-height:1.3;margin:0 0 8px}
+.nature-selected p{font-size:12px;color:#6d8079;line-height:1.55}
+.nature-place-type{margin-bottom:18px}
+.nature-detail-row{display:flex;justify-content:space-between;align-items:start;gap:12px;padding:9px 0;border-bottom:1px solid #edf2ed;font-size:11px}
+.nature-detail-row span{color:#72847b}
+.nature-detail-row strong{font-weight:700;text-align:right}
+.nature-nps-link{display:inline-block;color:#226b5b;font-weight:700;font-size:12px;margin-top:15px}
+.nature-list-header{padding:16px 24px 10px;border-top:1px solid #e2eae3}
+.nature-list{display:grid;max-height:380px;overflow-y:auto;padding:0 16px;gap:2px}
+.nature-place{border:0;background:transparent;text-align:left;cursor:pointer;border-radius:5px;padding:10px;display:flex;flex-direction:column;gap:4px}
+.nature-place:hover,.nature-place:focus-visible{background:#edf7ef}
+.nature-place strong{font-size:12px;font-weight:600;color:#244d41}
+.nature-place span{font-size:10px;color:#72877a}
+.nature-foot{padding:12px 24px;font-size:11px;color:#647b70;line-height:1.55}
+@media(max-width:980px){.nature-layout{grid-template-columns:1fr}.nature-list{max-height:250px}}
+@media(max-width:600px){.nature-controls{padding:12px}.nature-controls label{min-width:100%}.nature-selected{min-height:auto}}
