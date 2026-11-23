@@ -99,7 +99,7 @@ async function load(rows,render){
    }
    PERCENT_FIELDS.add(field);
    fromCatalog.push(field);
-   if(group&&![...group.options].some(x=>x.value===field)){
+   if(group&&![...group.querySelectorAll('option')].some(x=>x.value===field)){
     const choice=document.createElement('option');
     choice.value=field;
     choice.textContent=meta.label+' (%)';
