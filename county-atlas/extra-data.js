@@ -44,8 +44,10 @@ mortality_suicide:{title:'Suicide deaths by county of residence',label:'Suicide 
 mortality_overdose:{title:'Drug overdose deaths by county of residence',label:'Drug overdose deaths / 100K',kind:'rate',year:'CDC NVSS · annual, sometimes modeled',group:'mortality'},
 mortality_firearm:{title:'Firearm injury deaths by county of residence',label:'All firearm deaths / 100K',kind:'rate',year:'CDC NVSS · annual, sometimes modeled',group:'mortality'},
 juvenile_delinquency_rate:{title:'Juvenile delinquency court case rate (not crimes against children)',label:'Juvenile delinquency cases / 1K youth',kind:'rate',year:'2024 CHR release · historical juvenile cases',group:'chrr'},
+tree_equity_score:{title:'Urban Tree Equity Score (population-weighted)',label:'Urban Tree Equity Score · 0–100',kind:'score',year:'American Forests · urban block groups only',group:'tes'},
+urban_tree_canopy_pct:{title:'Tree canopy coverage in urban block groups',label:'Urban tree canopy (%)',kind:'percent',year:'American Forests · urban block groups only',group:'tes'},
 };
-const ready={acs:false,self:false,cbp:false,nonemp:false,bds:false,military:false,race:false,places:false,mortality:false,chrr:false};
+const ready={acs:false,self:false,cbp:false,nonemp:false,bds:false,military:false,race:false,places:false,mortality:false,chrr:false,tes:false};
 const errors={};
 const sourceLabels={};
  const fieldCoverage={};
@@ -60,10 +62,11 @@ const GROUP_FIELDS={
  race:['race_white_nh','race_black_nh','race_native_nh','race_asian_nh','race_pacific_nh','race_other_nh','race_multiracial_nh','ethnicity_hispanic'],
  places:['health_obesity','health_diabetes','health_depression','health_smoking','health_inactivity','health_short_sleep','health_poor_mental','health_binge_drinking','health_food_insecurity'],
  mortality:['mortality_homicide','mortality_firearm_homicide','mortality_suicide','mortality_overdose','mortality_firearm'],
- chrr:['juvenile_delinquency_rate']
+ chrr:['juvenile_delinquency_rate'],
+ tes:['tree_equity_score','urban_tree_canopy_pct','urban_bg_population','urban_bg_count']
 };
-const PERCENT_FIELDS=new Set(['highschool','college','veteran_share','armed_forces_share','self_employed',...GROUP_FIELDS.race,...GROUP_FIELDS.places]);
-const COUNTY_LIMITS={acs:2900,military:1800,self:1800,cbp:1800,nonemp:1800,bds:1800,race:2900,places:2800,places_all:100,mortality:1500,chrr:250};
+const PERCENT_FIELDS=new Set(['highschool','college','veteran_share','armed_forces_share','self_employed','urban_tree_canopy_pct',...GROUP_FIELDS.race,...GROUP_FIELDS.places]);
+const COUNTY_LIMITS={acs:2900,military:1800,self:1800,cbp:1800,nonemp:1800,bds:1800,race:2900,places:2800,places_all:100,mortality:1500,chrr:250,tes:500};
 function validValue(field,value){
  if(value===null)return null;
  if(typeof value!=='number'||!Number.isFinite(value)||value<0)return undefined;
@@ -169,5 +172,51 @@ async function load(rows,render){
   render();
  }
 }
-window.CountyExtras={metrics,ready,errors,sourceLabels,fieldCoverage,load,get pending(){return pending;}};
+
+async function loadTree(rows,render){
+ try{
+  const response=await fetch('data/tree-equity.json',{cache:'no-store'});
+  if(!response.ok)return;
+  const data=await response.json();
+  if(data.version!==1||data.dataset!=='CountyScope urban Tree Equity Score from American Forests'||
+    !Array.isArray(data.counties)||data.counties.length<500||
+    typeof data.year!=='number'||!data.method||!String(data.source).startsWith('https://www.treeequityscore.org/'))
+    throw Error('Unverified American Forests county aggregate');
+  const seen=new Set(),staged=[];
+  for(const row of data.counties){
+   if(!row||typeof row.fips!=='string'||!/^\d{5}$/.test(row.fips)||seen.has(row.fips))
+    throw Error('Invalid Tree Equity county FIPS');
+   seen.add(row.fips);
+   if(!rows.has(row.fips))continue;
+   if(!Number.isFinite(row.tree_equity_score)||row.tree_equity_score<0||row.tree_equity_score>100||
+     !Number.isFinite(row.urban_bg_count)||row.urban_bg_count<2)
+    throw Error('Invalid urban Tree Equity value');
+   if(row.urban_tree_canopy_pct!=null&&(!Number.isFinite(row.urban_tree_canopy_pct)||
+       row.urban_tree_canopy_pct<0||row.urban_tree_canopy_pct>100))
+    throw Error('Invalid canopy percentage');
+   staged.push(row);
+  }
+  if(staged.length<500)throw Error('Insufficient urban Tree Equity county coverage');
+  for(const row of staged){
+   const target=rows.get(row.fips);
+   for(const field of GROUP_FIELDS.tes)
+    if(Number.isFinite(row[field]))target[field]=row[field];
+  }
+  ready.tes=true;
+  sourceLabels.tes='American Forests Tree Equity Score '+data.year+' · urban block groups';
+  for(const field of GROUP_FIELDS.tes)
+   fieldCoverage[field]=staged.filter(row=>Number.isFinite(row[field])).length;
+  if(typeof document!=='undefined'){
+   const sel=document.getElementById('variable');
+   for(const opt of sel?.options||[])
+    if(opt.value==='tree_equity_score'||opt.value==='urban_tree_canopy_pct')
+     opt.disabled=!fieldCoverage[opt.value];
+  }
+ }catch(error){
+  errors.tes=error.message||'Tree Equity source unavailable';
+ }finally{
+  render();
+ }
+}
+window.CountyExtras={metrics,ready,errors,sourceLabels,fieldCoverage,load,loadTree,get pending(){return pending;}};
 })();
