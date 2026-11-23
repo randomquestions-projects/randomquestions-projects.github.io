@@ -116,8 +116,8 @@
   function adjusted(points, controls=[], moderator=null) {
     // Refit on one complete-case sample. Standardize continuous terms to
     // make raw income / large-population regressors numerically stable.
-    const keys=[...new Set(controls.filter(Boolean))];
-    if(moderator)keys.push(moderator);
+    const controlKeys=[...new Set(controls.filter(Boolean))];
+    const keys=[...new Set([...controlKeys,...(moderator?[moderator]:[])])];
     const data=points.filter(p=>keys.every(key=>finite(p.values[key])));
     const x=data.map(p=>p.x), y=data.map(p=>p.y);
     if(data.length<Math.max(35,keys.length*12+20))return {n:data.length,error:'Not enough complete counties'};
@@ -130,7 +130,7 @@
       colMap[key]=z.values;
     }
     const ones=Array(data.length).fill(1);
-    const controlCols=controls.filter(k=>k&&k!==moderator).map(k=>colMap[k]);
+    const controlCols=controlKeys.map(k=>colMap[k]);
     const model=ols(Y.values,[ones,X.values,...controlCols]);
     if(!model)return {n:data.length,error:'Controls are redundant or the model is singular'};
     const rx=ols(X.values,[ones,...controlCols]),ry=ols(Y.values,[ones,...controlCols]);
@@ -138,13 +138,14 @@
       X.values.map((v,i)=>v-rx.coefficients.reduce((s,b,j)=>s+b*[ones,...controlCols][j][i],0)),
       Y.values.map((v,i)=>v-ry.coefficients.reduce((s,b,j)=>s+b*[ones,...controlCols][j][i],0))
     ):null;
-    const output={n:data.length,r2:model.r2,beta:model.coefficients[1],partial:rPartial,controls:controls.filter(Boolean)};
+    const output={n:data.length,r2:model.r2,beta:model.coefficients[1],partial:rPartial,controls:controlKeys};
     if(moderator){
       // Moderator is included in the interaction model; if it was also chosen
       // as a control, it is only included once to avoid rank deficiency.
       const Z=colMap[moderator];
       const product=X.values.map((v,i)=>v*Z[i]);
-      const fit=ols(Y.values,[ones,X.values,...controlCols,Z,product]);
+      const interactionControlCols=controlKeys.filter(k=>k!==moderator).map(k=>colMap[k]);
+      const fit=ols(Y.values,[ones,X.values,...interactionControlCols,Z,product]);
       if(fit){
         output.interaction={
           n:data.length,betaXZ:fit.coefficients[fit.coefficients.length-1],
