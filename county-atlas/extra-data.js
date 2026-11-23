@@ -43,8 +43,10 @@ mortality_firearm_homicide:{title:'Firearm homicide deaths by county of residenc
 mortality_suicide:{title:'Suicide deaths by county of residence',label:'Suicide deaths / 100K residents',kind:'rate',year:'CDC NVSS · annual, sometimes modeled',group:'mortality'},
 mortality_overdose:{title:'Drug overdose deaths by county of residence',label:'Drug overdose deaths / 100K',kind:'rate',year:'CDC NVSS · annual, sometimes modeled',group:'mortality'},
 mortality_firearm:{title:'Firearm injury deaths by county of residence',label:'All firearm deaths / 100K',kind:'rate',year:'CDC NVSS · annual, sometimes modeled',group:'mortality'},
+violent_crime_rate:{title:'Violent crimes reported to participating police agencies',label:'Reported violent crime offenses / 100K',kind:'rate',year:'2024 CHR release · crime data from earlier years',group:'chrr'},
+juvenile_delinquency_rate:{title:'Juvenile delinquency court case rate (not crimes against children)',label:'Juvenile delinquency cases / 1K youth',kind:'rate',year:'2024 CHR release · historical juvenile cases',group:'chrr'},
 };
-const ready={acs:false,self:false,cbp:false,nonemp:false,bds:false,military:false,race:false,places:false,mortality:false};
+const ready={acs:false,self:false,cbp:false,nonemp:false,bds:false,military:false,race:false,places:false,mortality:false,chrr:false};
 const errors={};
 const sourceLabels={};
 let pending=1;
@@ -57,10 +59,11 @@ const GROUP_FIELDS={
  bds:['startups'],
  race:['race_white_nh','race_black_nh','race_native_nh','race_asian_nh','race_pacific_nh','race_other_nh','race_multiracial_nh','ethnicity_hispanic'],
  places:['health_obesity','health_diabetes','health_depression','health_smoking','health_inactivity','health_short_sleep','health_poor_mental','health_binge_drinking','health_food_insecurity'],
- mortality:['mortality_homicide','mortality_firearm_homicide','mortality_suicide','mortality_overdose','mortality_firearm']
+ mortality:['mortality_homicide','mortality_firearm_homicide','mortality_suicide','mortality_overdose','mortality_firearm'],
+ chrr:['violent_crime_rate','juvenile_delinquency_rate']
 };
 const PERCENT_FIELDS=new Set(['highschool','college','veteran_share','armed_forces_share','self_employed',...GROUP_FIELDS.race,...GROUP_FIELDS.places]);
-const COUNTY_LIMITS={acs:2900,military:1800,self:1800,cbp:1800,nonemp:1800,bds:1800,race:2900,places:2800,mortality:1500};
+const COUNTY_LIMITS={acs:2900,military:1800,self:1800,cbp:1800,nonemp:1800,bds:1800,race:2900,places:2800,mortality:1500,chrr:1400};
 function validValue(field,value){
  if(value===null)return null;
  if(typeof value!=='number'||!Number.isFinite(value)||value<0)return undefined;
