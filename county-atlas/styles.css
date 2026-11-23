@@ -123,3 +123,8 @@ main{padding:0 4%}.masthead{padding:56px 0 44px;display:flex;justify-content:spa
  .rel-selected-strip{display:block;padding:16px}
  .rel-linked{display:block;margin-top:11px}
 }
+
+.rel-color-legend{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;padding:1px 12px 5px;font-size:10px;color:#769183}
+.rel-color-legend[hidden]{display:none!important}
+.rel-color-legend strong{color:#527d6e;font-size:10px;font-weight:700}
+.rel-color-ramp{width:118px;height:10px;border-radius:4px;background:linear-gradient(90deg,#c8e1d6,#246e63);display:inline-block}
