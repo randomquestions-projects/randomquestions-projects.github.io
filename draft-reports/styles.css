@@ -70,3 +70,42 @@
 .cohort-caveat{border-top:1px solid #e7eee6;margin:20px 0 0;padding-top:15px;color:#849789;font-size:10px;line-height:1.7}
 @media(max-width:990px){.cohort-panel{padding:22px}.honors-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:690px){.cohort-panel{padding:17px 14px}.cohort-cards{grid-template-columns:1fr}.cohort-honors-header{flex-direction:column;align-items:stretch;gap:14px}.cohort-scope{align-self:flex-start}.honors-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.honors-roster-grid{grid-template-columns:1fr}.cohort-score{padding:12px 10px}.cohort-score-number{font-size:26px}}
+
+/* College View: program output, pro career depth, stars, and position U leaderboards. */
+#draft-view[hidden],.college-view[hidden],.college-detail[hidden]{display:none!important}
+.draft-view-toggle{display:flex;gap:5px;background:#ecf2eb;border:1px solid #dce7db;border-radius:10px;padding:5px;margin:0 0 23px;width:max-content}
+.view-toggle{border:0;background:transparent;border-radius:7px;padding:11px 19px;color:#63816a;font-size:12px;font-weight:800;cursor:pointer}
+.view-toggle.is-active{background:#fff;color:#254f33;box-shadow:0 1px 5px #294b321c}
+.college-head{padding:4px 2px 22px}
+.college-head h3{font-size:clamp(27px,3.5vw,44px);letter-spacing:-.055em;line-height:1.15;margin:10px 0}
+.college-head h3 em{color:#427b53}
+.college-head p{max-width:790px;font-size:13px;line-height:1.75;color:#778d7d;margin:0}
+.college-filters{display:grid;grid-template-columns:1fr 1fr minmax(150px,1.35fr) 1.2fr;gap:16px;padding:22px;background:#f5f8f4;border:1px solid #dfe9dd;border-radius:12px;margin:2px 0 14px}
+.college-filters .filter-block{min-width:0}
+.college-status{padding:9px 2px 16px;font-size:11px;color:#6d8c75}
+.college-leaders{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:6px 0 26px}
+.college-leader{border:1px solid #dfebdd;border-radius:10px;background:linear-gradient(145deg,#fff,#f4f8f3);padding:19px 17px;display:flex;flex-direction:column;align-items:flex-start;min-width:0;cursor:pointer}
+.college-leader:hover,.college-leader:focus-visible{border-color:#82ad88;outline-offset:2px}
+.college-leader-kicker{font-size:9px;letter-spacing:1.2px;font-weight:850;color:#6c8e75}
+.college-leader-name{font-size:17px;letter-spacing:-.03em;line-height:1.25;color:#2c5137;margin:13px 0 5px}
+.college-leader-value{font-weight:830;font-size:19px;letter-spacing:-.04em}
+.college-leader-desc{font-size:10px;color:#819588;margin-top:7px;line-height:1.4}
+.college-table-wrap{max-height:730px;overflow:auto;border-radius:9px;border:1px solid #e3ebe0}
+.college-table{min-width:1150px}
+.college-table tbody tr{cursor:pointer}
+.college-table tbody tr:hover,.college-table tbody tr.college-selected{background:#edf6ed}
+.college-table td{font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.college-school{font-weight:800;letter-spacing:-.015em;color:#2b5137}
+.college-num{font-weight:720;color:#46634d}
+.college-detail{border:1px solid #dae8d8;border-radius:12px;background:#f9fcf8;padding:22px;margin-top:24px}
+.college-detail-head{display:flex;align-items:start;justify-content:space-between;gap:12px;margin-bottom:17px}
+.college-detail-head h4{font-size:25px;letter-spacing:-.035em;margin:7px 0}
+.college-detail-head p{font-size:11px;color:#748b78;margin:0}
+.college-close{font-size:11px;border:1px solid #d3e2d0;background:white;border-radius:7px;color:#456b51;padding:10px;cursor:pointer}
+.college-roster{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;max-height:580px;overflow:auto}
+.college-person{display:flex;flex-direction:column;align-items:flex-start;gap:7px;text-align:left;padding:13px;border:1px solid #deeadc;border-radius:8px;background:white;cursor:pointer;min-width:0}
+.college-person:hover{background:#ecf5ea;border-color:#a4c7a5}
+.college-person strong{font-size:12px;color:#2b4c34}
+.college-person span{font-size:10px;color:#788c7b}
+@media(max-width:1100px){.college-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.college-leaders{grid-template-columns:repeat(2,minmax(0,1fr))}.college-roster{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:690px){.college-filters{grid-template-columns:1fr;padding:14px}.college-leaders{grid-template-columns:1fr 1fr;gap:8px}.college-leader{padding:12px}.college-leader-name{font-size:14px}.college-leader-value{font-size:16px}.college-roster{grid-template-columns:1fr}.college-detail{padding:14px}.college-head h3{font-size:31px}.view-toggle{padding:10px 14px}}
