@@ -130,7 +130,10 @@
       colMap[key]=z.values;
     }
     const ones=Array(data.length).fill(1);
-    const controlCols=controlKeys.map(k=>colMap[k]);
+    // The moderator enters as a main effect in both the adjusted and interaction
+    // models, even when it is not also selected in a regular control dropdown.
+    const adjustmentKeys=keys;
+    const controlCols=adjustmentKeys.map(k=>colMap[k]);
     const model=ols(Y.values,[ones,X.values,...controlCols]);
     if(!model)return {n:data.length,error:'Controls are redundant or the model is singular'};
     const rx=ols(X.values,[ones,...controlCols]),ry=ols(Y.values,[ones,...controlCols]);
@@ -138,7 +141,7 @@
       X.values.map((v,i)=>v-rx.coefficients.reduce((s,b,j)=>s+b*[ones,...controlCols][j][i],0)),
       Y.values.map((v,i)=>v-ry.coefficients.reduce((s,b,j)=>s+b*[ones,...controlCols][j][i],0))
     ):null;
-    const output={n:data.length,r2:model.r2,beta:model.coefficients[1],partial:rPartial,controls:controlKeys};
+    const output={n:data.length,r2:model.r2,beta:model.coefficients[1],partial:rPartial,controls:adjustmentKeys};
     if(moderator){
       // Moderator is included in the interaction model; if it was also chosen
       // as a control, it is only included once to avoid rank deficiency.
