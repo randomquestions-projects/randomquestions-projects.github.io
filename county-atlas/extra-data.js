@@ -117,7 +117,22 @@ async function load(rows,render){
       if(Object.prototype.hasOwnProperty.call(values,field))target[field]=values[field];
    }
   }
-  accepted.forEach(group=>{ready[group]=true;sourceLabels[group]=String(data.sources[group]);delete errors[group];});
+  accepted.forEach(group=>{
+     ready[group]=true;
+     sourceLabels[group]=String(data.sources[group]);
+     delete errors[group];
+     for(const field of GROUP_FIELDS[group])
+       fieldCoverage[field]=[...staging.values()].filter(x=>x[field]!=null).length;
+   });
+   // Map options with no real data remain disabled; absent never means zero.
+   if(typeof document!=='undefined'){
+     const selector=document.getElementById('variable');
+     for(const option of selector?.options||[]){
+       if(!metrics[option.value])continue;
+       option.disabled=!fieldCoverage[option.value];
+       if(option.disabled)option.title='No verified county observations in this release';
+     }
+   }
  }catch(error){
   errors.snapshot=error?.message||'Unable to load county metrics';
  }finally{
