@@ -176,3 +176,12 @@ main{padding:0 4%}.masthead{padding:56px 0 44px;display:flex;justify-content:spa
 .trend-table table{width:100%}
 .trend-table th,.trend-table td{font-size:11px;white-space:nowrap;padding:10px}
 .trend-table td:first-child{font-weight:600}
+
+/* Do not imply private datasets are missing or empty when the public site is stale. */
+.legacy-data-notice{border:1px solid #d1e0d8;background:#f4f8f5;border-radius:10px;padding:14px 16px;margin:16px 0;display:flex;flex-wrap:wrap;gap:4px 10px;color:#315547;font-size:12px;line-height:1.55}
+.legacy-data-notice strong{font-weight:750;color:#204839}
+.data-unavailable{border:1px solid #d8e6de;border-radius:10px;background:#f3f8f5;color:#315949;padding:24px 22px;margin:24px;line-height:1.55;font-size:13px}
+.data-unavailable strong{display:block;font-weight:700;font-size:15px;line-height:1.4}
+.data-unavailable p{margin:8px 0 0}
+.data-unavailable[hidden]{display:none!important}
+#nature-svg[hidden],#trend-svg[hidden]{display:none!important}

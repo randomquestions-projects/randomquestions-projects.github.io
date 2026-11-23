@@ -33,6 +33,10 @@
       <div class="yearnote"><span>PUBLIC SOURCES</span><strong>NCES + USRC</strong><small>2024–25 schools · 2020 congregations</small></div>
     </div>
 
+    <div class="legacy-data-notice" role="note">
+      <strong>This is the older public CountyScope preview.</strong>
+      <span>The expanded CDC, historical county, parks, and County Health Rankings datasets were saved to the private project, not published here. The password-protected site still needs hosting setup; the current public URL is not private.</span>
+    </div>
     <nav class="cs-tabs" role="tablist" aria-label="CountyScope views">
       <button id="cs-tab-map" type="button" role="tab" aria-controls="county-map-view" aria-selected="true"><span>◈</span> County map</button>
       <button id="cs-tab-relationships" type="button" role="tab" aria-controls="relationships-view" aria-selected="false"><span>↗</span> Relationships & analysis</button>
@@ -268,6 +272,7 @@
       <div class="nature-layout">
         <div class="panel nature-map-card">
           <div class="panel-title"><div><span class="mini-label">HISTORICAL COUNTY CHANGES</span><h2 id="trend-years">2009–2024</h2></div><span id="trend-coverage">—</span></div>
+          <div class="data-unavailable" id="trend-data-unavailable" hidden role="status"><strong>Historical county data isn’t available on this public website.</strong><p>The verified historical records were moved to the private CountyScope dataset. The password-protected site has not been launched yet, so this tab cannot display the private data here.</p></div>
           <svg id="trend-svg" viewBox="0 0 1000 610" role="img" aria-label="County change choropleth map"></svg>
           <p class="nature-foot" id="trend-legend"></p>
         </div>
@@ -296,6 +301,7 @@
       </div>
       <div class="nature-layout">
         <section class="panel nature-map-card"><div class="panel-title"><div><span class="mini-label">NATIONAL PARK SYSTEM / REFERENCE LOCATIONS</span><h2>Explore by location</h2></div><span id="nature-count">—</span></div>
+          <div class="data-unavailable" id="nature-data-unavailable" hidden role="status"><strong>The parks dataset isn’t available on this public website.</strong><p>475 verified park locations were saved to the private CountyScope dataset. The password-protected site still needs to be deployed before this map can show them.</p></div>
           <svg id="nature-svg" viewBox="0 0 1000 610" role="img" aria-label="Clickable United States national park map"></svg>
           <p class="nature-foot">Gold markers are national parks; green markers are other NPS units or related sites. Locations indicate reference coordinates, not public entrances or driving directions. Dataset is a validated CC0 aggregation from Park Atlas, derived from National Park Service records.</p>
         </section>

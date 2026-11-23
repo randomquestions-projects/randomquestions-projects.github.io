@@ -98,3 +98,16 @@ test('SEDA selectors still disabled until source publication is authorized',()=>
  assert.match(html,/value="seda_math" disabled/);
  assert.match(html,/value="seda_reading" disabled/);
 });
+
+test('Public preview explains protected datasets instead of showing empty map as real data',()=>{
+ const parks=fs.readFileSync(path.join(__dirname,'../nature.js'),'utf8');
+ const trends=fs.readFileSync(path.join(__dirname,'../trends.js'),'utf8');
+ assert.match(html,/id="nature-data-unavailable" hidden role="status"/);
+ assert.match(html,/id="trend-data-unavailable" hidden role="status"/);
+ assert.match(html,/older public CountyScope preview/);
+ assert.match(html,/current public URL is not private/);
+ assert.match(parks,/\$\('nature-data-unavailable'\)/);
+ assert.match(trends,/\$\('trend-data-unavailable'\)/);
+ assert.match(parks,/\$\('nature-svg'\)\.hidden=true/);
+ assert.match(trends,/\$\('trend-svg'\)\.hidden=true/);
+});
