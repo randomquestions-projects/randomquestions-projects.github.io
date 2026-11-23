@@ -10,6 +10,33 @@
   let selectedRow = null;
   let latestLoad = 0;
   let dataUnavailable = false;
+  let cohortCatalog = null;
+  let cohortUnavailable = false;
+  let currentModelVersion = null;
+  let honorScope = 'round';
+  let honorMetric = null;
+  const honorDefinitions = {
+    NFL: [
+      ['pro_bowls', 'Pro Bowls'],
+      ['total_all_pro', 'All-Pro seasons'],
+      ['first_team_all_pro', 'First-team All-Pro'],
+      ['mvp', 'MVP'],
+      ['opoy', 'Offensive POY'],
+      ['dpoy', 'Defensive POY'],
+      ['super_bowl_titles', 'Champion-team rosters']
+    ],
+    NBA: [
+      ['all_star', 'All-Star selections'],
+      ['all_nba_total', 'All-NBA teams'],
+      ['all_nba_first', 'First-team All-NBA'],
+      ['mvp', 'MVP'],
+      ['finals_mvp', 'Finals MVP'],
+      ['dpoy', 'Defensive POY'],
+      ['roy', 'Rookie of the Year'],
+      ['all_defense_total', 'All-Defensive teams'],
+      ['championship_roster_seasons', 'Champion-team stints']
+    ]
+  };
 
   const safeText = (tag, className, value) => {
     const node = document.createElement(tag);
@@ -282,6 +309,164 @@
 
     if (!$('player-dialog').open) $('player-dialog').showModal();
   }
+
+  function awardCount(p, key) {
+    const value = p.career?.awards?.[key];
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  }
+
+  function addCohortCard(parent, title, group, groupPicks) {
+    const card = safeText('article', 'cohort-card', '');
+    const head = safeText('div', 'cohort-card-header', '');
+    const titleBox = safeText('div', '', '');
+    titleBox.appendChild(safeText('div', 'cohort-card-name', title));
+    titleBox.appendChild(safeText('div', 'cohort-card-subtitle',
+      groupPicks.length + ' selections · career performance, not draft slot'));
+    head.appendChild(titleBox);
+    const status = group?.status || 'unavailable';
+    head.appendChild(safeText('span', 'cohort-status',
+      status === 'mature' ? 'ESTABLISHED' : status === 'provisional' ? 'PROVISIONAL' :
+      status === 'developing' ? 'DEVELOPING' : 'DATA PENDING'));
+    card.appendChild(head);
+    const pair = safeText('div', 'cohort-score-pair', '');
+    for (const [key, name, caption] of [
+      ['depth', 'Depth', 'Contributors, starters & longevity'],
+      ['greatness', 'Greatness', 'Elite careers, stars & honors']
+    ]) {
+      const tile = safeText('div', 'cohort-score', '');
+      tile.appendChild(safeText('div', 'cohort-score-heading', name));
+      const line = safeText('div', 'cohort-score-line', '');
+      const score = group?.[key]?.score;
+      line.appendChild(safeText('strong', 'cohort-score-number',
+        Number.isFinite(score) ? score.toFixed(1) : '—'));
+      if (group?.[key]?.grade) {
+        line.appendChild(safeText('span', 'cohort-score-grade', group[key].grade));
+      }
+      tile.appendChild(line);
+      tile.appendChild(safeText('p', 'cohort-score-caption', Number.isFinite(score) ?
+        caption + ' · historical percentile' :
+        (status === 'developing' ? 'Careers too young for a reliable grade' :
+          'Waiting for verified cohort summary')));
+      pair.appendChild(tile);
+    }
+    card.appendChild(pair);
+    const stats = safeText('div', 'cohort-totals', '');
+    if (group?.depth && Number.isInteger(group.depth.contributors)) {
+      for (const [key, description] of [
+        ['contributors', 'contributors'], ['starters', 'established starters'],
+        ['long_careers', 'long careers'], ['quality_players', 'quality players']
+      ]) {
+        const el = safeText('span', 'cohort-total', '');
+        el.appendChild(safeText('strong', '', String(group.depth[key])));
+        el.appendChild(document.createTextNode(' ' + description));
+        stats.appendChild(el);
+      }
+      const el = safeText('span', 'cohort-total', '');
+      el.appendChild(safeText('strong', '', String(group.greatness?.elite_players || 0)));
+      el.appendChild(document.createTextNode(' elite players'));
+      stats.appendChild(el);
+    } else {
+      stats.appendChild(safeText('span', 'cohort-total',
+        status === 'developing' ? 'Honors are shown below while careers develop.' :
+          'Full-cohort historical benchmark is awaiting verification.'));
+    }
+    card.appendChild(stats);
+    parent.appendChild(card);
+  }
+
+  function renderCohortPanel() {
+    const allPicks = picks.filter(p => p.league === state.league && p.year === state.year);
+    const roundPicks = allPicks.filter(p => p.round === state.round);
+    const year = cohortCatalog?.leagues?.[state.league]?.[String(state.year)];
+    const verified = Boolean(year && currentModelVersion &&
+      cohortCatalog.model_versions?.[state.league] === currentModelVersion &&
+      year.draft.picks === allPicks.length &&
+      year.rounds?.[state.round - 1]?.picks === roundPicks.length);
+    const cards = $('cohort-cards');
+    cards.replaceChildren();
+    addCohortCard(cards, state.year + ' ' + state.league + ' · Entire class',
+      verified ? year.draft : null, allPicks);
+    addCohortCard(cards, 'Round ' + state.round,
+      verified ? year.rounds[state.round - 1] : null, roundPicks);
+
+    $('honors-round-number').textContent = String(state.round);
+    $('honors-class').setAttribute('aria-pressed', String(honorScope === 'class'));
+    $('honors-round').setAttribute('aria-pressed', String(honorScope === 'round'));
+    const scopedPicks = honorScope === 'class' ? allPicks : roundPicks;
+    const categories = honorDefinitions[state.league];
+    if (!categories.some(([key]) => key === honorMetric)) {
+      honorMetric = state.league === 'NFL' ? 'pro_bowls' : 'all_star';
+    }
+    const metrics = $('honors-metrics');
+    metrics.replaceChildren();
+    for (const [key, label] of categories) {
+      const selections = scopedPicks.reduce((s, p) => s + awardCount(p, key), 0);
+      const players = scopedPicks.filter(p => awardCount(p, key) > 0).length;
+      const btn = safeText('button', 'honor-metric', '');
+      btn.type = 'button';
+      btn.setAttribute('aria-pressed', String(honorMetric === key));
+      btn.setAttribute('aria-label', label + ': ' + selections + ' selections, ' +
+        players + ' players. Show the recipients.');
+      btn.appendChild(safeText('span', 'honor-metric-count', String(selections)));
+      btn.appendChild(safeText('span', 'honor-metric-label', label));
+      btn.appendChild(safeText('span', 'honor-metric-extra',
+        players + (players === 1 ? ' player' : ' players')));
+      btn.addEventListener('click', () => {
+        honorMetric = key;
+        renderCohortPanel();
+      });
+      metrics.appendChild(btn);
+    }
+    const roster = $('honors-roster');
+    roster.replaceChildren();
+    const selectedLabel = categories.find(([key]) => key === honorMetric)?.[1] || 'Honors';
+    const people = scopedPicks.filter(p => awardCount(p, honorMetric) > 0)
+      .sort((a, b) => awardCount(b, honorMetric) - awardCount(a, honorMetric) ||
+        (b.rating?.quality || 0) - (a.rating?.quality || 0) ||
+        a.overall - b.overall);
+    roster.appendChild(safeText('h5', 'honors-roster-title', selectedLabel +
+      ' · ' + (honorScope === 'class' ? 'entire class' : 'Round ' + state.round) +
+      ' · ' + people.length + (people.length === 1 ? ' player' : ' players')));
+    if (!people.length) {
+      roster.appendChild(safeText('p', 'honors-roster-empty', !scopedPicks.length ?
+        'Draft players are loading or unavailable.' :
+        'No verified recipients from this selection yet. Choose another honor or the entire class.'));
+    } else {
+      const grid = safeText('div', 'honors-roster-grid', '');
+      for (const p of people) {
+        const btn = safeText('button', 'honors-person', '');
+        btn.type = 'button';
+        btn.setAttribute('aria-label', 'Open player profile for ' + p.name);
+        btn.appendChild(safeText('span', 'honors-person-name', p.name + ' · #' + p.overall));
+        const n = awardCount(p, honorMetric);
+        btn.appendChild(safeText('span', 'honors-person-detail',
+          String(n) + (n === 1 ? ' selection' : ' selections') + ' ↗'));
+        btn.addEventListener('click', () => showProfile(p));
+        grid.appendChild(btn);
+      }
+      roster.appendChild(grid);
+    }
+    $('cohort-panel').dataset.summaryStatus = verified ? 'verified' :
+      cohortUnavailable ? 'unavailable' : 'pending';
+  }
+
+  async function loadCohortCatalog() {
+    try {
+      const response = await fetch('./data/cohort_summaries.json', {cache: 'no-cache'});
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const data = await response.json();
+      if (data.schema_version !== 1 || data.method !== 'cohort-depth-greatness-v1' ||
+          !data.leagues?.NFL || !data.leagues?.NBA) throw new Error('Invalid cohort schema');
+      cohortCatalog = data;
+      cohortUnavailable = false;
+    } catch (err) {
+      console.warn('Derived cohort scores not available:', err);
+      cohortCatalog = null;
+      cohortUnavailable = true;
+    }
+    render();
+  }
+
   function render() {
     const list = filterPicks();
     const all = picks.filter((p) => p.league === state.league && p.year === state.year && p.round === state.round);
@@ -293,6 +478,7 @@
       (state.league === 'NFL' ? 'Career performance, historical expectations and draft value · 2026 season partial · Source: nflverse' :
         'NBA career production, impact metrics, honors and draft value · 2026–27 season in progress.') :
       (dataUnavailable ? 'Unable to load this draft class.' : 'Draft selections not yet available for this year and round.');
+    renderCohortPanel();
     $('count-picks').textContent = String(list.length);
     $('count-rated').textContent = String(list.filter((p) => p.rating && typeof p.rating.quality === 'number' && p.rating.grade).length);
     $('count-rounds').textContent = state.round + '/' + (state.league === 'NBA' ? 2 : 7);
@@ -327,6 +513,8 @@
     state.round = 1;
     state.query = '';
     state.sort = 'pick';
+    honorMetric = null;
+    honorScope = 'round';
     $('player-search').value = '';
     $('sort-filter').value = 'pick';
     populateYears();
@@ -364,6 +552,12 @@
       } else { state.year = 2020; state.round = 1; $('year-filter').value = '2020'; $('round-filter').value = '1'; }
       loadDraft();
     });
+    $('honors-class').addEventListener('click', () => {
+      honorScope = 'class'; renderCohortPanel();
+    });
+    $('honors-round').addEventListener('click', () => {
+      honorScope = 'round'; renderCohortPanel();
+    });
     $('close-dialog').addEventListener('click', () => $('player-dialog').close());
     $('player-dialog').addEventListener('click', (e) => {
       const bounds = $('player-dialog').getBoundingClientRect();
@@ -377,6 +571,7 @@
     const year = state.year;
     picks = [];
     dataUnavailable = false;
+    currentModelVersion = null;
     $('data-state').textContent = 'Loading verified draft records…';
     render();
     try {
@@ -391,6 +586,7 @@
           data.picks.some((p,i)=>p.league !== league || p.year !== year || p.overall !== i+1))
         throw new Error('Invalid '+league+' export');
       picks = data.picks;
+      currentModelVersion = data.model_version;
       $('data-state').textContent = league+' 2000–2026 · career data & grades';
     } catch(err) {
       if(token !== latestLoad)return;
@@ -407,7 +603,7 @@
     $('year-filter').value = String(state.year);
     populateRounds();
     wireEvents();
-    await loadDraft();
+    await Promise.all([loadDraft(), loadCohortCatalog()]);
   }
   main();
 })();
