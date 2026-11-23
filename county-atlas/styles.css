@@ -167,3 +167,12 @@ main{padding:0 4%}.masthead{padding:56px 0 44px;display:flex;justify-content:spa
 .nature-foot{padding:12px 24px;font-size:11px;color:#647b70;line-height:1.55}
 @media(max-width:980px){.nature-layout{grid-template-columns:1fr}.nature-list{max-height:250px}}
 @media(max-width:600px){.nature-controls{padding:12px}.nature-controls label{min-width:100%}.nature-selected{min-height:auto}}
+
+/* Historical county comparison map and biggest movers */
+.trends-view{margin-top:26px;min-width:0}
+#trend-svg{width:100%;height:auto;background:#f8faf8;max-height:650px}
+.trend-county{vector-effect:non-scaling-stroke}
+.trend-table{max-height:650px;overflow:auto}
+.trend-table table{width:100%}
+.trend-table th,.trend-table td{font-size:11px;white-space:nowrap;padding:10px}
+.trend-table td:first-child{font-weight:600}
