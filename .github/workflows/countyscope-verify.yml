@@ -1,0 +1,50 @@
+name: CountyScope map and data validation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'county-atlas/**'
+      - '.github/workflows/countyscope-verify.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'county-atlas/**'
+      - '.github/workflows/countyscope-verify.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout public site
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Syntax-check CountyScope modules
+        run: |
+          node --check county-atlas/app.js
+          node --check county-atlas/extra-data.js
+          node --check county-atlas/seda.js
+      - name: Verify snapshot handling without external credentials
+        run: node --test county-atlas/tests/county-data.test.cjs
+      - name: Inspect optional county-metrics release
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("county-atlas/data/county-metrics.json")
+          if not p.exists():
+              print("Census county snapshot not published yet; Census layers remain unavailable.")
+          else:
+              d=json.loads(p.read_text())
+              assert d["dataset"]=="CountyScope verified Census county aggregates"
+              assert d["version"]==1
+              assert 3050<=len(d["counties"])<=3300
+              assert "acs" in d["sources"]
+              assert len({r["fips"] for r in d["counties"]})==len(d["counties"])
+              print("Verified published Census counties:",len(d["counties"]))
+          PY
