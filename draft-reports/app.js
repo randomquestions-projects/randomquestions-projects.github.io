@@ -502,6 +502,8 @@
       tab.tabIndex = active ? 0 : -1;
     }
     $('draft-content').setAttribute('aria-labelledby', 'tab-' + state.league.toLowerCase());
+    updateCollegePosition();
+    renderCollege();
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set('league', state.league.toLowerCase());
     nextUrl.searchParams.set('year', String(state.year));
@@ -527,6 +529,7 @@
     const league = (params.get('league') || 'nfl').toUpperCase();
     const year = Number(params.get('year'));
     const round = Number(params.get('round'));
+    collegeView = params.get('view') === 'college' ? 'college' : 'draft';
     if (league === 'NFL' || league === 'NBA') state.league = league;
     if (Number.isInteger(year) && year >= 1960 && year <= 2026) state.year = year;
     if (Number.isInteger(round) && round >= 1 && round <= (state.league === 'NFL' ? 7 : 2)) state.round = round;
@@ -596,6 +599,238 @@
     }
     if(token === latestLoad)render();
   }
+
+  // College View consumes only the allowlisted, derived cross-year release.
+  // No raw source datasets, weights, or private model artifacts are required in-browser.
+  let collegeCatalog = null;
+  let collegeView = 'draft';
+  let collegeEra = 'all';
+  let collegePosition = 'all';
+  let collegeSort = 'picks';
+  let collegeSearch = '';
+  let selectedCollege = null;
+  let collegeRows = [];
+  const collegePositions = {
+    NFL: [['all','All positions'],['QB','Quarterbacks · QBU'],['WR','Wide receivers · WRU'],
+      ['RB','Running backs · RBU'],['TE','Tight ends · TEU'],['OL','Offensive line · OLU'],
+      ['DL','Defensive line · DLU'],['LB','Linebackers · LBU'],['DB','Defensive backs · DBU'],
+      ['K','Kickers'],['P','Punters']],
+    NBA: [['all','All positions']]
+  };
+  function collegePositionFor(p) {
+    const pos = (p.p || '').toUpperCase();
+    if (['CB','DB','S','FS','SS'].includes(pos)) return 'DB';
+    if (['DE','DT','DL','NT','EDGE'].includes(pos)) return 'DL';
+    if (['T','G','C','OL','OT','OG'].includes(pos)) return 'OL';
+    if (['RB','FB','HB'].includes(pos)) return 'RB';
+    if (['LB','ILB','OLB','MLB'].includes(pos)) return 'LB';
+    return pos;
+  }
+  function matchingCollegePlayer(p) {
+    if (collegeEra === 'mature' && p.y > 2017) return false;
+    if (collegeEra === 'recent' && p.y < 2018) return false;
+    if (collegeEra === 'decade' && p.y < 2010) return false;
+    if (collegeEra === 'latest' && p.y < 2020) return false;
+    if (state.league === 'NFL' && collegePosition !== 'all' &&
+        collegePositionFor(p) !== collegePosition) return false;
+    return true;
+  }
+  function collegeNum(x) { return Number(x || 0).toLocaleString('en-US'); }
+  function collegeStats(school) {
+    const players = school.players.filter(matchingCollegePlayer);
+    if (!players.length) return null;
+    let first=0,quality=0,stars=0,superstars=0,contributors=0,starPower=0,depth=0,
+      honors=0,allstars=0,mvp=0,yards=0,sumQuality=0,rated=0,championships=0;
+    for (const p of players) {
+      const q = typeof p.q === 'number' ? p.q : null;
+      const a = p.aw || [];
+      const good = state.league === 'NFL'
+        ? p.g >= 48 && p.w >= 12
+        : p.g >= 164 && p.m >= 3000;
+      const starting = state.league === 'NFL' ? p.ss >= 3 : p.gs >= 164;
+      const durable = state.league === 'NFL' ? p.g >= 96 : p.g >= 410;
+      if (p.r === 1) first++;
+      if (q !== null) {rated++;sumQuality+=q; if(q>=50)quality++;if(q>=75)stars++;if(q>=85)superstars++;}
+      if (good) contributors++;
+      depth += (good?1:0)*2 + (starting?1:0)*2 + (durable?1:0) + (q!==null&&q>=50?1:0)*2;
+      const allstar = a[0] || 0, allPro = a[1] || 0, firstAllPro = a[2] || 0;
+      const mvps = a[3] || 0, secondary = (a[4] || 0)+(a[5] || 0), titles = a[6] || 0;
+      allstars+=allstar; mvp+=mvps;championships+=titles;
+      honors+=allPro+mvps+secondary;
+      starPower+=(q!==null&&q>=75?2:0)+(q!==null&&q>=85?2:0)
+        +3.5*mvps+2*secondary+1.5*firstAllPro+0.6*(allPro-firstAllPro)
+        +0.45*allstar+0.2*titles;
+      yards += state.league === 'NFL'
+        ? (collegePosition === 'QB' ? p.pass : collegePosition === 'RB' ? p.rush :
+           collegePosition === 'WR'||collegePosition === 'TE' ? p.ry : 0)
+        : p.pts;
+    }
+    const n = players.length;
+    return {name:school.name,players,n,first,quality,stars,superstars,contributors,
+      depth:Math.round(1000*depth/(7*n))/10, greatness:Math.round(starPower*10)/10,
+      honors,allstars,mvp,championships,yards,avg: rated ? Math.round(sumQuality/rated*10)/10:null,
+      rate:Math.round(1000*contributors/n)/10,rated};
+  }
+  function updateCollegePosition() {
+    const select=$('college-position'),previous=collegePosition;
+    select.replaceChildren();
+    for(const [key,label] of collegePositions[state.league]) {
+      const option=document.createElement('option');
+      option.value=key;option.textContent=label;select.appendChild(option);
+    }
+    collegePosition=collegePositions[state.league].some(([key])=>key===previous)?previous:'all';
+    select.value=collegePosition;
+  }
+  function collegeSortValue(s) {
+    if (collegeSort==='first') return s.first;
+    if (collegeSort==='stars') return s.stars;
+    if (collegeSort==='depth') return s.depth;
+    if (collegeSort==='greatness') return s.greatness;
+    if (collegeSort==='contributors') return s.contributors;
+    if (collegeSort==='rate') return s.rate;
+    if (collegeSort==='quality') return s.avg ?? -1;
+    if (collegeSort==='honors') return s.honors;
+    if (collegeSort==='allstars') return s.allstars;
+    if (collegeSort==='mvp') return s.mvp;
+    if (collegeSort==='yards') return s.yards;
+    return s.n;
+  }
+  function collegeMetricCard(title,school,value,desc) {
+    const el=safeText('article','college-leader','');
+    el.appendChild(safeText('span','college-leader-kicker',title));
+    el.appendChild(safeText('strong','college-leader-name',school?.name||'—'));
+    el.appendChild(safeText('span','college-leader-value',school?value:'—'));
+    el.appendChild(safeText('span','college-leader-desc',desc));
+    if (school) {el.tabIndex=0;el.setAttribute('role','button');el.addEventListener('click',()=>selectCollege(school.name));
+      el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectCollege(school.name);}});}
+    return el;
+  }
+  function collegeBest(rows,metric) {return [...rows].sort((a,b)=>b[metric]-a[metric]||b.n-a.n)[0];}
+  function renderCollege() {
+    if (!$('college-view')) return;
+    $('draft-view').hidden=collegeView!=='draft';
+    $('college-view').hidden=collegeView!=='college';
+    $('view-draft').classList.toggle('is-active',collegeView==='draft');
+    $('view-college').classList.toggle('is-active',collegeView==='college');
+    $('view-draft').setAttribute('aria-pressed',String(collegeView==='draft'));
+    $('view-college').setAttribute('aria-pressed',String(collegeView==='college'));
+    if(collegeView!=='college')return;
+    if (!collegeCatalog?.leagues?.[state.league]) {
+      $('college-status').textContent='College rankings are loading or unavailable. The draft board remains accessible.';
+      $('college-leaders').replaceChildren();
+      $('college-rows').replaceChildren();
+      $('college-count').textContent='—';
+      $('college-detail').hidden=true;
+      return;
+    }
+    const all=collegeCatalog.leagues[state.league].map(collegeStats).filter(Boolean);
+    // Ranking rates and averages require a meaningful sample; smaller programs remain
+    // visible but cannot top a rate-only leaderboard on a one-player denominator.
+    const eligible=all.filter(x=>x.n>=5);
+    let rows=all.filter(s=>s.name.toLowerCase().includes(collegeSearch.trim().toLowerCase()));
+    const sampleSort=['rate','quality','depth'].includes(collegeSort);
+    rows.sort((a,b)=>(sampleSort&&a.n>=5!== (b.n>=5) ? (a.n>=5?-1:1) : 0)
+      ||collegeSortValue(b)-collegeSortValue(a)||b.n-a.n||a.name.localeCompare(b.name));
+    collegeRows=rows;
+    $('college-status').textContent=state.league+' · '+collegeCatalog.years+' · '+
+      (collegePosition==='all'?'All positions':collegePosition)+' · '+ all.reduce((s,x)=>s+x.n,0).toLocaleString()+
+      ' drafted players · '+all.length+' colleges in this selection';
+    const leaders=$('college-leaders');
+    leaders.replaceChildren();
+    if (all.length) {
+      const most=collegeBest(all,'n'), first=collegeBest(all,'first'),
+        stars=collegeBest(all,'stars'),depth=collegeBest(eligible,'depth');
+      leaders.append(
+        collegeMetricCard('MOST DRAFTED',most,collegeNum(most.n)+' picks','2000–2026 selected cohorts'),
+        collegeMetricCard('MOST FIRST ROUNDERS',first,collegeNum(first.first)+' picks','First-round selections'),
+        collegeMetricCard('MOST ELITE PLAYERS',stars,collegeNum(stars.stars)+' stars','Career quality of 75+'),
+        collegeMetricCard('BEST DEPTH RATE · 5+ PICKS',depth,depth?depth.depth.toFixed(1)+'/100':'—','Contributors, starters and longevity')
+      );
+    }
+    $('college-count').textContent=rows.length+' schools';
+    const tbody=$('college-rows');tbody.replaceChildren();
+    const yardLabel=state.league==='NBA'?'points':
+      collegePosition==='WR'||collegePosition==='TE'?'rec yds':
+      collegePosition==='RB'?'rush yds':collegePosition==='QB'?'pass yds':'—';
+    for (let i=0;i<Math.min(rows.length,350);i++){
+      const s=rows[i],tr=document.createElement('tr');tr.tabIndex=0;
+      tr.setAttribute('aria-label','View '+s.name+' drafted players');
+      if(selectedCollege===s.name)tr.classList.add('college-selected');
+      const vals=[String(i+1),s.name,collegeNum(s.n),collegeNum(s.first),
+        collegeNum(s.quality),collegeNum(s.stars),s.depth.toFixed(1),s.greatness.toFixed(1),
+        collegeNum(s.allstars),collegeNum(s.honors),yardLabel==='—'?'—':collegeNum(s.yards)+' '+yardLabel];
+      vals.forEach((v,j)=>cell(tr,safeText('span',j===1?'college-school':j===0?'pick-number':'college-num',v)));
+      tr.addEventListener('click',()=>selectCollege(s.name));
+      tr.addEventListener('keydown',e=>{if(e.target===tr&&(e.key==='Enter'||e.key===' ')){e.preventDefault();selectCollege(s.name);}});
+      tbody.appendChild(tr);
+    }
+    if(selectedCollege && all.some(s=>s.name===selectedCollege))renderCollegeDetail(all.find(s=>s.name===selectedCollege));
+    else $('college-detail').hidden=true;
+  }
+  function selectCollege(name){
+    selectedCollege=selectedCollege===name?null:name;
+    renderCollege();
+    if(selectedCollege)$('college-detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  async function showCollegePlayer(p){
+    try{
+      const response=await fetch('./data/'+state.league.toLowerCase()+'/'+p.y+'.json',{cache:'force-cache'});
+      if(!response.ok)throw Error('Player record unavailable');
+      const data=await response.json();
+      const full=data.picks?.find(x=>x.overall===p.o && x.name===p.n);
+      if(!full)throw Error('Matching draft pick unavailable');
+      selectedRow=null;showProfile(full);
+    }catch(e){console.error('Could not open college player dossier',e);$('college-status').textContent='Player dossier unavailable; try again.';}
+  }
+  function renderCollegeDetail(s) {
+    const panel=$('college-detail');panel.hidden=false;panel.replaceChildren();
+    const head=safeText('div','college-detail-head','');
+    const title=safeText('div','','');title.appendChild(safeText('span','small-kicker','SCHOOL ROSTER / '+state.league));
+    title.appendChild(safeText('h4','',s.name));
+    title.appendChild(safeText('p','',s.n+' drafted players · '+s.first+' first round · '+s.quality+
+      ' quality players · '+s.stars+' elite stars · '+s.allstars+
+      (state.league==='NFL'?' Pro Bowl selections':' All-Star selections')));
+    const close=safeText('button','college-close','Close ×');close.type='button';close.addEventListener('click',()=>{
+      selectedCollege=null;panel.hidden=true;document.querySelectorAll('.college-selected').forEach(e=>e.classList.remove('college-selected'));});
+    head.append(title,close);panel.appendChild(head);
+    const roster=safeText('div','college-roster','');
+    for(const p of [...s.players].sort((a,b)=>(b.q??-1)-(a.q??-1)||a.y-b.y)){
+      const b=safeText('button','college-person','');b.type='button';
+      b.appendChild(safeText('strong','',p.n));
+      b.appendChild(safeText('span','',p.y+' · '+(p.p||state.league)+' · Round '+p.r+' / Pick '+p.o));
+      b.appendChild(safeText('span','', 'Quality '+(typeof p.q==='number'?p.q.toFixed(1):'not rated')+
+        ' · '+(p.aw?.[0]||0)+(state.league==='NFL'?' Pro Bowls':' All-Stars')+' ↗'));
+      b.addEventListener('click',()=>showCollegePlayer(p));roster.appendChild(b);
+    }
+    panel.appendChild(roster);
+  }
+  async function loadCollegeCatalog(){
+    try{
+      const response=await fetch('./data/college_summaries.json',{cache:'no-cache'});
+      if(!response.ok)throw Error('HTTP '+response.status);
+      const data=await response.json();
+      if(data.schema_version!==1||data.method!=='college-talent-v1'||
+        !Array.isArray(data.leagues?.NFL)||!Array.isArray(data.leagues?.NBA)||
+        data.leagues.NFL.length<100||data.leagues.NBA.length<50)throw Error('Invalid college summary');
+      collegeCatalog=data;
+    }catch(e){console.warn('College summary unavailable',e);collegeCatalog=null;}
+    renderCollege();
+  }
+  function wireCollege(){
+    updateCollegePosition();
+    $('view-draft').addEventListener('click',()=>{collegeView='draft';renderCollege();syncCollegeUrl();});
+    $('view-college').addEventListener('click',()=>{collegeView='college';renderCollege();syncCollegeUrl();});
+    $('college-era').addEventListener('change',e=>{collegeEra=e.target.value;selectedCollege=null;renderCollege();});
+    $('college-position').addEventListener('change',e=>{collegePosition=e.target.value;selectedCollege=null;renderCollege();});
+    $('college-search').addEventListener('input',e=>{collegeSearch=e.target.value;selectedCollege=null;renderCollege();});
+    $('college-sort').addEventListener('change',e=>{collegeSort=e.target.value;renderCollege();});
+  }
+  function syncCollegeUrl(){
+    const url=new URL(window.location.href);
+    if(collegeView==='college')url.searchParams.set('view','college');
+    else url.searchParams.delete('view');
+    window.history.replaceState(null,'',url.pathname+url.search+url.hash);
+  }
   async function main() {
     $('copyright-year').textContent = String(new Date().getFullYear());
     restoreState();
@@ -603,7 +838,8 @@
     $('year-filter').value = String(state.year);
     populateRounds();
     wireEvents();
-    await Promise.all([loadDraft(), loadCohortCatalog()]);
+    wireCollege();
+    await Promise.all([loadDraft(), loadCohortCatalog(), loadCollegeCatalog()]);
   }
   main();
 })();
