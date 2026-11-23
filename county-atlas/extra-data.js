@@ -19,73 +19,78 @@ const metrics={
 };
 const ready={acs:false,self:false,cbp:false,nonemp:false,bds:false,military:false};
 const errors={};
-let pending=6;
-const parse=value=>{if(value==null||value==='')return null;const n=Number(value);return Number.isFinite(n)&&n>=0?n:null;};
-const percent=(num,den)=>num==null||den==null||den<=0?null:100*num/den;
-const endpoint=(base,params)=>base+'?'+new URLSearchParams(params);
-const sourceURLs={
- acs:endpoint('https://api.census.gov/data/2024/acs/acs5/profile',{get:'DP03_0062E,DP02_0059E,DP02_0067E,DP02_0068E,DP02_0069E,DP02_0070E,DP03_0046E',for:'county:*'}),
- self:endpoint('https://api.census.gov/data/2024/acs/acs5',{get:'B24080_001E,B24080_005E,B24080_010E,B24080_015E,B24080_020E',for:'county:*'}),
- cbp:endpoint('https://api.census.gov/data/2023/cbp',{get:'ESTAB',for:'county:*',NAICS2017:'00',LFO:'001',EMPSZES:'212'}),
- nonemp:endpoint('https://api.census.gov/data/2024/nonemp',{get:'NESTAB',for:'county:*',NAICS2022:'00',LFO:'001',RCPSZES:'001'}),
- bds:endpoint('https://api.census.gov/data/timeseries/bds',{get:'ESTABS_ENTRY',for:'county:*',time:'2023',NAICS:'00'}),
- military:endpoint('https://api.census.gov/data/2024/acs/acs5',{get:'B23025_001E,B23025_006E',for:'county:*'})
+let pending=1;
+const GROUP_FIELDS={
+ acs:['income','adults25','hsCount','collegeCount','highschool','college','civilianAdults','veterans','veteran_share'],
+ military:['population16','armed_forces','armed_forces_share'],
+ self:['selfWorkers','selfEmployedCount','self_employed'],
+ cbp:['microbusiness'],
+ nonemp:['nonemployer'],
+ bds:['startups']
 };
-async function fetchRecords(url){
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),50000);
- try{
-   const response=await fetch(url,{signal:controller.signal,mode:'cors'});
-   if(!response.ok)throw Error('HTTP '+response.status);
-   const records=await response.json();
-   if(!Array.isArray(records)||records.length<1500||!Array.isArray(records[0]))throw Error('County data absent or incomplete');
-   return records;
- }finally{clearTimeout(timer);}
+const PERCENT_FIELDS=new Set(['highschool','college','veteran_share','armed_forces_share','self_employed']);
+const COUNTY_LIMITS={acs:2900,military:1800,self:1800,cbp:1800,nonemp:1800,bds:1800};
+function validValue(field,value){
+ if(value===null)return null;
+ if(typeof value!=='number'||!Number.isFinite(value)||value<0)return undefined;
+ if(PERCENT_FIELDS.has(field)&&value>100)return undefined;
+ if(field==='income'&&value>1_000_000)return undefined;
+ return value;
 }
-function ingest(rows,records,handle){
- const header=records[0],si=header.indexOf('state'),ci=header.indexOf('county');
- if(si<0||ci<0)throw Error('Missing FIPS county keys');
- let matched=0;
- for(const rec of records.slice(1)){
-  const id=String(rec[si]).padStart(2,'0')+String(rec[ci]).padStart(3,'0');
-  if(!rows.has(id))continue;
-  const source=Object.fromEntries(header.map((name,index)=>[name,rec[index]]));
-  handle(rows.get(id),source);
-  matched++;
- }
- if(matched<1400)throw Error('Insufficient matched counties: '+matched);
- return matched;
-}
-const ingestByGroup={
- acs:(r,x)=>{
-  r.income=parse(x.DP03_0062E);r.adults25=parse(x.DP02_0059E);
-  r.hsCount=parse(x.DP02_0067E);r.collegeCount=parse(x.DP02_0068E);
-  r.civilianAdults=parse(x.DP02_0069E);r.veterans=parse(x.DP02_0070E);
-  r.highschool=percent(r.hsCount,r.adults25);r.college=percent(r.collegeCount,r.adults25);
-  r.veteran_share=percent(r.veterans,r.civilianAdults);
- },
- self:(r,x)=>{
-  const parts=['B24080_005E','B24080_010E','B24080_015E','B24080_020E'].map(k=>parse(x[k]));
-  r.selfEmployedCount=parts.every(n=>n!=null)?parts.reduce((a,b)=>a+b,0):null;
-  r.selfWorkers=parse(x.B24080_001E);
-  r.self_employed=percent(r.selfEmployedCount,r.selfWorkers);
- },
- cbp:(r,x)=>{r.microbusiness=parse(x.ESTAB);},
- nonemp:(r,x)=>{r.nonemployer=parse(x.NESTAB);},
- bds:(r,x)=>{r.startups=parse(x.ESTABS_ENTRY);},
- military:(r,x)=>{r.population16=parse(x.B23025_001E);r.armed_forces=parse(x.B23025_006E);r.armed_forces_share=percent(r.armed_forces,r.population16);}
-};
 async function load(rows,render){
- // Optional checked-in public aggregate snapshot from a private ingestion pipeline.
- // API fallbacks are best-effort only and never silently fill missing records with zeros.
- const tasks=Object.keys(ready).map(async(group)=>{
-   try{
-     const data=await fetchRecords(sourceURLs[group]);
-     ingest(rows,data,ingestByGroup[group]);
-     ready[group]=true;
-   }catch(error){errors[group]=error.message;}
-   finally{pending--;render();}
- });
- await Promise.allSettled(tasks);
+ const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),12000);
+ try{
+  // Intentionally no browser-side Census API calls: all Census data queries
+  // require an API key as of 2026. No credentials may be placed in public JS.
+  const response=await fetch('data/county-metrics.json',{signal:controller.signal,cache:'no-store'});
+  if(!response.ok)throw Error('Validated county metrics snapshot has not been published');
+  const data=await response.json();
+  if(data.version!==1||data.dataset!=='CountyScope verified Census county aggregates'||!Array.isArray(data.counties)||data.counties.length<3050||!data.sources||typeof data.sources!=='object')
+     throw Error('County metrics snapshot schema or national coverage invalid');
+  const seen=new Set(), staging=new Map();
+  for(const entry of data.counties){
+   if(!entry||typeof entry.fips!=='string'||!/^\d{5}$/.test(entry.fips)||seen.has(entry.fips))
+      throw Error('Invalid or duplicate county FIPS');
+   seen.add(entry.fips);
+   if(!rows.has(entry.fips))continue;
+   const values={};
+   for(const fields of Object.values(GROUP_FIELDS)){
+    for(const field of fields){
+     if(!Object.prototype.hasOwnProperty.call(entry,field))continue;
+     const value=validValue(field,entry[field]);
+     if(value===undefined)throw Error('Invalid metric '+field+' at FIPS '+entry.fips);
+     values[field]=value;
+    }
+   }
+   staging.set(entry.fips,values);
+  }
+  // Do not partially show any data from an invalid file.
+  if(staging.size<2900)throw Error('Insufficient geographic matches');
+  const accepted=[];
+  for(const [group,fields] of Object.entries(GROUP_FIELDS)){
+    if(!Object.prototype.hasOwnProperty.call(data.sources,group))continue;
+    const mainField=group==='acs'?'highschool':group==='military'?'armed_forces':group==='self'?'self_employed':fields[0];
+    const coverage=[...staging.values()].filter(x=>x[mainField]!=null).length;
+    if(coverage<COUNTY_LIMITS[group]){errors[group]='Source coverage below threshold ('+coverage+')';continue;}
+    accepted.push(group);
+  }
+  if(!accepted.includes('acs'))throw Error('Validated 2024 ACS source not available');
+  // Only use named, validated fields from source groups actually present.
+  for(const [fips,values] of staging){
+   const target=rows.get(fips);
+   for(const group of accepted){
+    for(const field of GROUP_FIELDS[group])
+      if(Object.prototype.hasOwnProperty.call(values,field))target[field]=values[field];
+   }
+  }
+  accepted.forEach(group=>{ready[group]=true;delete errors[group];});
+ }catch(error){
+  errors.snapshot=error?.message||'Unable to load county metrics';
+ }finally{
+  clearTimeout(timer);
+  pending=0;
+  render();
+ }
 }
-window.CountyExtras={metrics,ready,errors,sourceURLs,load,get pending(){return pending;}};
+window.CountyExtras={metrics,ready,errors,load,get pending(){return pending;}};
 })();
