@@ -85,7 +85,7 @@ async function load(rows,render){
   // source-derived measures. No HTML, arbitrary fields or browser API tokens.
   const extended=data.catalog&&typeof data.catalog==='object'?data.catalog:{};
   const fromCatalog=[];
-  const group=document?.getElementById?.('variable')?.querySelector?.('optgroup[label="Public health · CDC PLACES 2025, modeled"]');
+  const group=typeof document!=='undefined'?document.getElementById('variable')?.querySelector('optgroup[label="Public health · CDC PLACES 2025, modeled"]'):null;
   for(const [field,meta] of Object.entries(extended)){
    if(!/^places_[a-z][a-z0-9_]{2,23}$/.test(field)||!meta||meta.group!=='places_all'||
        meta.kind!=='percent'||typeof meta.label!=='string'||meta.label.length>180||
