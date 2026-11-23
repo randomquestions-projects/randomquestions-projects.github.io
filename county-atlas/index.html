@@ -15,6 +15,7 @@
 <script defer src="relationships-stats.js"></script>
 <script defer src="relationships.js"></script>
 <script defer src="nature.js"></script>
+<script defer src="trends.js"></script>
 <script defer src="app.js"></script>
 </head>
 <body>
@@ -35,6 +36,7 @@
     <nav class="cs-tabs" role="tablist" aria-label="CountyScope views">
       <button id="cs-tab-map" type="button" role="tab" aria-controls="county-map-view" aria-selected="true"><span>◈</span> County map</button>
       <button id="cs-tab-relationships" type="button" role="tab" aria-controls="relationships-view" aria-selected="false"><span>↗</span> Relationships & analysis</button>
+      <button id="cs-tab-trends" type="button" role="tab" aria-controls="trends-view" aria-selected="false"><span>↻</span> Trends &amp; movers</button>
       <button id="cs-tab-nature" type="button" role="tab" aria-controls="nature-view" aria-selected="false"><span>♣</span> Parks & nature</button>
     </nav>
     <section id="county-map-view" class="workspace" role="tabpanel" aria-labelledby="cs-tab-map" aria-label="Interactive county map explorer">
@@ -239,6 +241,38 @@
       </div>
     </section>
 
+
+
+    <section id="trends-view" class="trends-view" role="tabpanel" aria-labelledby="cs-tab-trends" hidden>
+      <div class="rel-heading"><div>
+        <div class="mini-label">CENSUS HISTORY / U.S. COUNTIES</div>
+        <h2>What has <em>changed?</em></h2>
+        <p>Compare genuine non-overlapping five-year ACS observations, plot changes across the country, and find the largest movers. Historical source years are shown rather than invented annual estimates.</p>
+      </div><span class="rel-status" id="trend-status">Loading historical data…</span></div>
+      <div class="nature-controls panel">
+        <label><span>METRIC</span><select id="trend-metric"></select></label>
+        <label><span>FROM YEAR</span><select id="trend-from"></select></label>
+        <label><span>TO YEAR</span><select id="trend-to"></select></label>
+        <label><span>STATE FIPS</span><select id="trend-state"><option value="">All states</option></select></label>
+        <label><span>BIGGEST MOVERS</span><select id="trend-sort">
+          <option value="rise">Largest increases</option><option value="fall">Largest decreases</option>
+          <option value="absolute">Largest absolute changes</option>
+        </select></label>
+      </div>
+      <p class="source-fine" id="trend-warning">Historical ACS estimates are validated by source year and geography; missing means not reported.</p>
+      <div class="nature-layout">
+        <div class="panel nature-map-card">
+          <div class="panel-title"><div><span class="mini-label">HISTORICAL COUNTY CHANGES</span><h2 id="trend-years">2009–2024</h2></div><span id="trend-coverage">—</span></div>
+          <svg id="trend-svg" viewBox="0 0 1000 610" role="img" aria-label="County change choropleth map"></svg>
+          <p class="nature-foot" id="trend-legend"></p>
+        </div>
+        <div class="panel nature-details">
+          <div class="panel-title"><div><span class="mini-label">TOP COUNTY CHANGES</span><h2>Biggest movers</h2></div><span id="trend-measure">—</span></div>
+          <div class="table-wrap trend-table"><table><thead><tr><th>County FIPS</th><th>From</th><th>To</th><th id="trend-column">Change</th></tr></thead>
+          <tbody id="trend-rankings"><tr><td colspan="4">Source validation pending</td></tr></tbody></table></div>
+        </div>
+      </div>
+    </section>
 
     <section id="nature-view" class="nature-view" role="tabpanel" aria-labelledby="cs-tab-nature" hidden>
       <div class="rel-heading"><div>
