@@ -125,6 +125,7 @@ function renderScatter(points,assessment){
  const svg=d3.select('#rel-scatter');svg.selectAll('*').remove();
  const W=980,H=520,left=88,right=40,top=25,bottom=70;
  if(points.length<4){
+  $('rel-color-legend').hidden=true;
   svg.append('text').attr('x',W/2).attr('y',H/2).attr('text-anchor','middle').attr('fill','#71817b').text('Select two measures with available county data.');
   return;
  }
