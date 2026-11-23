@@ -310,7 +310,7 @@ function choose(point){
 function highlightCounty(id){
  state.selected=String(id??'');
  setNode('rel-selected-county',state.selected?(state.features.find(f=>String(f.id)===state.selected)?.properties?.name||'Selected county'):'No county selected');
- if(!state.initialized)return;
+ if(!state.initialized||$('relationships-view')?.hidden)return;
  const row=state.points.find(p=>p.fips===state.selected);
  setNode('rel-selected-values',row?METRICS[state.x].label+': '+fmt(state.x,row.x)+' · '+METRICS[state.y].label+': '+fmt(state.y,row.y):'Choose a county to inspect its measures');
  const current=state.mode;
@@ -319,6 +319,8 @@ function highlightCounty(id){
 }
 function render(){
  if(!state.initialized)return;
+ // Avoid creating thousands of SVG elements while the user is on County map.
+ if($('relationships-view')?.hidden)return;
  updateOptions();
  const points=rows(),a=engine.assess(points);
  state.points=points;state.lastAssess=a;
