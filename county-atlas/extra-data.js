@@ -63,7 +63,7 @@ const GROUP_FIELDS={
  chrr:['juvenile_delinquency_rate']
 };
 const PERCENT_FIELDS=new Set(['highschool','college','veteran_share','armed_forces_share','self_employed',...GROUP_FIELDS.race,...GROUP_FIELDS.places]);
-const COUNTY_LIMITS={acs:2900,military:1800,self:1800,cbp:1800,nonemp:1800,bds:1800,race:2900,places:2800,mortality:1500,chrr:250};
+const COUNTY_LIMITS={acs:2900,military:1800,self:1800,cbp:1800,nonemp:1800,bds:1800,race:2900,places:2800,places_all:100,mortality:1500,chrr:250};
 function validValue(field,value){
  if(value===null)return null;
  if(typeof value!=='number'||!Number.isFinite(value)||value<0)return undefined;
@@ -81,6 +81,34 @@ async function load(rows,render){
   const data=await response.json();
   if(data.version!==1||data.dataset!=='CountyScope verified Census county aggregates'||!Array.isArray(data.counties)||data.counties.length<3050||!data.sources||typeof data.sources!=='object')
      throw Error('County metrics snapshot schema or national coverage invalid');
+  // Only metadata from the validated private CDC publisher can add new
+  // source-derived measures. No HTML, arbitrary fields or browser API tokens.
+  const extended=data.catalog&&typeof data.catalog==='object'?data.catalog:{};
+  const fromCatalog=[];
+  const group=document?.getElementById?.('variable')?.querySelector?.('optgroup[label="Public health · CDC PLACES 2025, modeled"]');
+  for(const [field,meta] of Object.entries(extended)){
+   if(!/^places_[a-z][a-z0-9_]{2,23}$/.test(field)||!meta||meta.group!=='places_all'||
+       meta.kind!=='percent'||typeof meta.label!=='string'||meta.label.length>180||
+       !Number.isInteger(meta.coverage)||meta.coverage<100)continue;
+   if(!Object.hasOwn(metrics,field)){
+    metrics[field]={title:meta.label+' by county',label:meta.label,
+     kind:'percent',year:'2025 CDC PLACES · modeled',group:'places_all'};
+   }
+   PERCENT_FIELDS.add(field);
+   fromCatalog.push(field);
+   if(group&&![...group.options].some(x=>x.value===field)){
+    const choice=document.createElement('option');
+    choice.value=field;
+    choice.textContent=meta.label+' (%)';
+    choice.disabled=true;
+    group.append(choice);
+   }
+  }
+  if(fromCatalog.length){
+    GROUP_FIELDS.places_all=fromCatalog;
+    // The group is valid only when the publisher explicitly declares it.
+    if(!data.sources.places_all)throw Error('Missing provenance for expanded PLACES metrics');
+  }
   const seen=new Set(), staging=new Map();
   for(const entry of data.counties){
    if(!entry||typeof entry.fips!=='string'||!/^\d{5}$/.test(entry.fips)||seen.has(entry.fips))
