@@ -60,7 +60,7 @@ const name=f=>(f.properties?.name||'County')+', '+(state.stateNames?.get(String(
 const available=id=>{
  if(!id||!METRICS[id])return false;
  if(id.startsWith('seda_'))return E.ready.seda===true;
- if(E.metrics[id]&&['race','places','places_all','mortality','chrr'].includes(E.metrics[id].group))return E.ready[E.metrics[id].group]===true && (!E.fieldCoverage||E.fieldCoverage[id]>0);
+ if(E.metrics[id]&&['race','places','places_all','mortality','chrr','tes','chrr_full'].includes(E.metrics[id].group))return E.ready[E.metrics[id].group]===true && (!E.fieldCoverage||E.fieldCoverage[id]>0);
  if(['college','highschool','income','veteran_share','veterans_per_10k'].includes(id))return E.ready.acs===true;
  if(id.startsWith('armed_forces'))return E.ready.military===true;
  if(id==='self_employed')return E.ready.self===true;
@@ -426,8 +426,8 @@ function refresh(){
  if(!state.initialized)return;
  let added=false;
  for(const [id,info] of Object.entries(E.metrics)){
-  if(info.group!=='places_all'||Object.hasOwn(METRICS,id))continue;
-  METRICS[id]={label:info.label,unit:'percent',year:info.year,get:r=>r[id]};
+  if(!['places_all','chrr_full'].includes(info.group)||Object.hasOwn(METRICS,id))continue;
+  METRICS[id]={label:info.label,unit:info.kind==='percent'?'percent':'number',year:info.year,get:r=>r[id]};
   added=true;
  }
  if(added)populate();
