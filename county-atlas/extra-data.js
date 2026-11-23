@@ -47,7 +47,7 @@ juvenile_delinquency_rate:{title:'Juvenile delinquency court case rate (not crim
 tree_equity_score:{title:'Urban Tree Equity Score (population-weighted)',label:'Urban Tree Equity Score · 0–100',kind:'score',year:'American Forests · urban block groups only',group:'tes'},
 urban_tree_canopy_pct:{title:'Tree canopy coverage in urban block groups',label:'Urban tree canopy (%)',kind:'percent',year:'American Forests · urban block groups only',group:'tes'},
 };
-const ready={acs:false,self:false,cbp:false,nonemp:false,bds:false,military:false,race:false,places:false,mortality:false,chrr:false,tes:false};
+const ready={acs:false,self:false,cbp:false,nonemp:false,bds:false,military:false,race:false,places:false,mortality:false,chrr:false,tes:false,chrr_full:false};
 const errors={};
 const sourceLabels={};
  const fieldCoverage={};
@@ -218,5 +218,63 @@ async function loadTree(rows,render){
   render();
  }
 }
-window.CountyExtras={metrics,ready,errors,sourceLabels,fieldCoverage,load,loadTree,get pending(){return pending;}};
+
+async function loadCHRR(rows,render){
+ try{
+  const response=await fetch('data/county-chrr-2025.json',{cache:'no-store'});
+  if(!response.ok)return;
+  const data=await response.json();
+  if(data.version!==1||data.dataset!=='CountyScope CHRR 2025 source-verified county measures'||
+     !Array.isArray(data.counties)||data.counties.length<3000||
+     !data.catalog||Object.keys(data.catalog).length<35||
+     !String(data.source).startsWith('https://www.countyhealthrankings.org/'))
+    throw Error('County Health Rankings dataset failed source verification');
+  const catalog={},group=typeof document!=='undefined'?
+    document.getElementById('variable')?.querySelector('optgroup[label="County Health Rankings · 2025 release"]'):null;
+  for(const [id,meta] of Object.entries(data.catalog)){
+   if(!/^chrr_v\d{3}$/.test(id)||meta.group!=='chrr_full'||
+      meta.kind!=='number'||typeof meta.label!=='string'||meta.label.length>140||
+      !Number.isInteger(meta.coverage)||meta.coverage<100)continue;
+   catalog[id]=meta;
+  }
+  if(Object.keys(catalog).length<35)throw Error('Too few CHRR source dictionary fields');
+  const seen=new Set(),staged=new Map();
+  for(const row of data.counties){
+   if(!row||typeof row.fips!=='string'||!/^\d{5}$/.test(row.fips)||seen.has(row.fips))
+    throw Error('Invalid CHRR county FIPS');
+   seen.add(row.fips);
+   if(!rows.has(row.fips))continue;
+   const values={};
+   for(const field of Object.keys(catalog)){
+    if(!Object.prototype.hasOwnProperty.call(row,field))continue;
+    const value=row[field];
+    if(!Number.isFinite(value)||value< -10000000||value>1000000000)
+     throw Error('Invalid County Health Rankings source value');
+    values[field]=value;
+   }
+   staged.set(row.fips,values);
+  }
+  if(staged.size<2900)throw Error('Insufficient matched County Health Rankings counties');
+  for(const [id,meta] of Object.entries(catalog)){
+   const matched=[...staged.values()].filter(v=>Number.isFinite(v[id])).length;
+   if(matched<100)continue;
+   fieldCoverage[id]=matched;
+   metrics[id]={title:meta.label+' by county',label:meta.label,
+     kind:'number',year:meta.year,group:'chrr_full'};
+   if(group){
+    const option=document.createElement('option');
+    option.value=id;option.textContent=meta.label+' · source units';
+    group.append(option);
+   }
+  }
+  if(Object.keys(metrics).filter(x=>x.startsWith('chrr_v')).length<35)
+   throw Error('Insufficient populated County Health Rankings measures');
+  for(const [fips,values] of staged)Object.assign(rows.get(fips),values);
+  ready.chrr_full=true;
+  sourceLabels.chrr_full='County Health Rankings 2025 · observation years vary';
+ }catch(error){
+  errors.chrr_full=error.message||'Full County Health Rankings dataset unavailable';
+ }finally{render();}
+}
+window.CountyExtras={metrics,ready,errors,sourceLabels,fieldCoverage,load,loadTree,loadCHRR,get pending(){return pending;}};
 })();
