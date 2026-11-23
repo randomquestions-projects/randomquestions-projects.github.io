@@ -12,6 +12,8 @@
 <script defer src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 <script defer src="extra-data.js"></script>
 <script defer src="seda.js"></script>
+<script defer src="relationships-stats.js"></script>
+<script defer src="relationships.js"></script>
 <script defer src="app.js"></script>
 </head>
 <body>
@@ -29,7 +31,11 @@
       <div class="yearnote"><span>PUBLIC SOURCES</span><strong>NCES + USRC</strong><small>2024–25 schools · 2020 congregations</small></div>
     </div>
 
-    <section class="workspace" aria-label="Interactive county map explorer">
+    <nav class="cs-tabs" role="tablist" aria-label="CountyScope views">
+      <button id="cs-tab-map" type="button" role="tab" aria-controls="county-map-view" aria-selected="true"><span>◈</span> County map</button>
+      <button id="cs-tab-relationships" type="button" role="tab" aria-controls="relationships-view" aria-selected="false"><span>↗</span> Relationships & analysis</button>
+    </nav>
+    <section id="county-map-view" class="workspace" role="tabpanel" aria-labelledby="cs-tab-map" aria-label="Interactive county map explorer">
       <div class="toolbar">
         <label><span>MAP VARIABLE</span><select id="variable"><option value="churches">Churches / congregations*</option><option value="schools">All K–12 schools</option><option value="public">Public K–12 schools</option><option value="private">Private K–12 schools</option><option value="ratio">Schools per 100 congregations</option><option value="congregations_ratio">Congregations per 100 schools</option>
 <optgroup label="School performance · SEDA 6.0">
@@ -97,6 +103,98 @@
           <div class="directory-tabs" role="group" aria-label="Directory type"><button data-list="public" type="button" class="active">Public schools</button><button data-list="private" type="button">Private schools</button><button data-list="worship" type="button">Places of worship</button></div>
           <label class="directory-search"><span>⌕</span><input id="directory-search" placeholder="Search local listings…" type="search" aria-label="Search directory"></label>
           <div id="directory-list" class="directory-list"><div class="directory-placeholder">Select a county to inspect its public school listings.</div></div><button id="directory-more" type="button" class="show-more" hidden>Show more locations ↓</button></section>
+      </div>
+    </section>
+
+    <section class="relationships" id="relationships-view" role="tabpanel" aria-labelledby="cs-tab-relationships" hidden>
+      <div class="rel-heading">
+        <div>
+          <div class="mini-label">EXPLORE THE RELATIONSHIPS / U.S. COUNTIES</div>
+          <h2>What moves <em>together?</em></h2>
+          <p>Compare pairs of real county-level measures. Switch between scatterplot, bivariate county map, and statistical analysis without changing your selected variables or filters.</p>
+        </div>
+        <span class="rel-status" id="rel-status" role="status" aria-live="polite">Waiting for county data…</span>
+      </div>
+      <div class="rel-toolbar panel">
+        <div class="rel-controls">
+          <label class="rel-field rel-mode"><span>ANALYSIS TYPE</span><select id="rel-mode"><option value="scatter">Scatterplot & trend</option><option value="map">Bivariate county map</option><option value="stats">Correlations & statistical analysis</option></select></label>
+          <label class="rel-field"><span>X-AXIS / FIRST VARIABLE</span><select id="rel-x" aria-label="X-axis county variable"></select></label>
+          <label class="rel-field"><span>Y-AXIS / SECOND VARIABLE</span><select id="rel-y" aria-label="Y-axis county variable"></select></label>
+          <button type="button" id="rel-swap" class="rel-outline" title="Swap X and Y" aria-label="Swap X and Y">⇄ Swap axes</button>
+          <label class="rel-field"><span>STATE</span><select id="rel-state" aria-label="Filter counties by state"></select></label>
+          <label class="rel-field"><span>MINIMUM COUNTY POPULATION</span><select id="rel-minpop"><option value="0">All counties</option><option value="10000">10,000+</option><option value="25000">25,000+</option><option value="50000">50,000+</option><option value="100000">100,000+</option><option value="250000">250,000+</option></select></label>
+          <label class="rel-field"><span>CORRELATION WEIGHTING</span><select id="rel-weight"><option value="county">Equal weight per county</option><option value="population">Weight by 2020 population</option></select></label>
+          <label id="rel-color-label" class="rel-field"><span>DOT COLOR BY</span><select id="rel-color" aria-label="Color scatterplot dots by"></select></label>
+          <label id="rel-point-size-label" class="rel-field"><span>DOT SIZE BY</span><select id="rel-size"><option value="population">County population</option><option value="equal">Same dot size</option></select></label>
+          <div id="rel-control-block" class="rel-advanced" hidden>
+            <label class="rel-field"><span>ADJUST FOR / CONTROL 1</span><select id="rel-control" aria-label="First regression control"></select></label>
+            <label class="rel-field"><span>ADJUST FOR / CONTROL 2</span><select id="rel-control2" aria-label="Second regression control"></select></label>
+          </div>
+          <div id="rel-moderator-block" class="rel-advanced" hidden>
+            <label class="rel-field"><span>INTERACTION / MODERATOR (OPTIONAL)</span><select id="rel-moderator" aria-label="Choose a moderator for an interaction effect"></select></label>
+          </div>
+          <button id="rel-reset" type="button" class="rel-outline">↺ Reset comparison</button>
+        </div>
+      </div>
+
+      <div class="rel-metric-grid">
+        <article><span>PAIRED COUNTIES</span><strong id="rel-counties">—</strong><small>Both X and Y reported</small></article>
+        <article><span id="rel-pearson-label">PEARSON CORRELATION</span><strong id="rel-pearson">—</strong><small>Linear association (−1 to +1)</small></article>
+        <article><span>SPEARMAN RANK</span><strong id="rel-spearman">—</strong><small>Monotonic rank association</small></article>
+        <article><span>UNWEIGHTED R²</span><strong id="rel-r2">—</strong><small>Simple county-level linear model</small></article>
+      </div>
+
+      <section class="panel rel-analysis-panel">
+        <div class="panel-title">
+          <div><span class="mini-label">CONNECTED ANALYTICS</span><h2>Relationships explorer</h2></div>
+          <span id="rel-source" class="rel-source-note">Source years shown here</span>
+        </div>
+        <div id="rel-plot-wrap" class="rel-plot-wrap">
+          <div id="rel-panel-scatter">
+            <svg id="rel-scatter" viewBox="0 0 980 520" role="img" aria-label="Interactive scatterplot comparing two county measures"></svg>
+            <p id="rel-plot-note" class="rel-chart-caption">Counties plotted as points, with a fitted trend line</p>
+          </div>
+          <div id="rel-panel-map" hidden>
+            <svg id="rel-bivariate-map" viewBox="0 0 1000 610" role="img" aria-label="Bivariate choropleth map showing both selected county measures"></svg>
+            <div class="rel-legend-section">
+              <div><div class="mini-label">BIVARIATE KEY · 3 × 3 COUNTY QUANTILES</div>
+                <div class="rel-bivar-axes">
+                  <span id="rel-bivar-y">↑ Y variable</span>
+                  <div id="rel-bivar-legend" class="rel-bivar-legend" aria-label="3 by 3 bivariate color legend"></div>
+                  <span id="rel-bivar-x">X variable →</span>
+                </div>
+              </div>
+              <p id="rel-bivar-note" class="rel-chart-caption"></p>
+            </div>
+          </div>
+          <div id="rel-tooltip" class="rel-tooltip" hidden></div>
+        </div>
+        <div id="rel-panel-stats" class="rel-stats" hidden>
+          <div class="rel-table-grid">
+            <article>
+              <div class="rel-table-title"><div class="mini-label">CORRELATION / UNADJUSTED</div><h3>How strongly are they related?</h3></div>
+              <table class="rel-table"><thead><tr><th>Statistic</th><th>Value</th><th>Interpretation</th></tr></thead><tbody id="rel-stat-table"></tbody></table>
+            </article>
+            <article>
+              <div class="rel-table-title"><div class="mini-label">CONTROLS / INTERACTION EFFECT</div><h3>After accounting for other variables</h3><p id="rel-model-spec">Select regression controls above</p></div>
+              <table class="rel-table"><thead><tr><th>Measure</th><th>Estimate</th><th>Interpretation</th></tr></thead><tbody id="rel-regression-table"></tbody></table>
+            </article>
+          </div>
+          <div class="rel-matrix-card">
+            <div class="rel-table-title"><div class="mini-label">PAIRWISE PATTERNS</div><h3>Correlation matrix</h3><p>Each cell uses counties reporting that particular pair of variables; hover a cell for the sample size.</p></div>
+            <div class="rel-table-scroll"><table class="rel-matrix"><thead><tr id="rel-matrix-head"></tr></thead><tbody id="rel-matrix-body"></tbody></table></div>
+          </div>
+          <div class="rel-matrix-card">
+            <div class="rel-table-title"><div class="mini-label">HIGHEST Y VALUES / ACTIVE FILTERS</div><h3>Counties in this comparison</h3><p id="rel-coverage">Only counties with both values available are analyzed</p></div>
+            <div class="rel-table-scroll"><table class="rel-table"><thead><tr><th>County</th><th>X variable</th><th>Y variable</th><th>Population</th><th></th></tr></thead><tbody id="rel-county-table"></tbody></table></div>
+          </div>
+        </div>
+        <div class="rel-selected-strip"><div><span class="mini-label">SELECTED COUNTY</span><h3 id="rel-selected-county">Select a county</h3><p id="rel-selected-values">Click a county or dot to inspect its values</p></div><span class="rel-linked">Linked to County map spotlight</span></div>
+      </section>
+      <div class="rel-method-notes">
+        <p id="rel-weight-hint">Each county contributes equally to the leading correlation. Population-weighted r appears in the statistical table.</p>
+        <p><strong>Important:</strong> These are ecological, cross-sectional county associations, not evidence of causation or individual behavior. Armed Forces residents (% ages 16+) is <strong>not</strong> annual Army enlistment or recruiting rates. Rates using 2020 population are population-normalized proxies from different dataset years. SEDA performance cannot be plotted unless authorized scores are published. Spatial clustering, bases, age differences, selection effects and outliers can influence results.</p>
+        <p>Regression coefficients are descriptive standardized ordinary least squares on complete paired counties. Optional controls and interactions are county-level, unweighted by default. The interaction term estimates whether the X–Y slope varies with a third metric; it does not prove that metric causes the variation.</p>
       </div>
     </section>
 
