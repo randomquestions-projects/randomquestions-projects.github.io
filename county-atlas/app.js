@@ -171,6 +171,13 @@ function renderSide(){
  ['selected-seda-reading',r?.seda_reading==null?'—':(r.seda_reading>0?'+':'')+r.seda_reading.toFixed(2)+' SD'],
  ['selected-self',r?.self_employed==null?'—':r.self_employed.toFixed(1)+'%'],
  ['selected-nonemp',fmt(r?.nonemployer)]]){const element=$(id);if(element)element.textContent=value;}
+ const groupMap={'selected-income':'acs','selected-hs':'acs','selected-college':'acs','selected-veterans':'acs','selected-military':'military','selected-self':'self','selected-nonemp':'nonemp','selected-seda-overall':'seda','selected-seda-math':'seda','selected-seda-reading':'seda'};
+ for(const [id,group] of Object.entries(groupMap)){
+  const element=$(id);
+  if(element)element.parentElement.hidden=E.ready[group]!==true;
+ }
+ const notice=$('county-metric-notice');
+ if(notice)notice.hidden=E.ready.acs===true||E.pending>0;
  $('open-directory').disabled=!f;
  d3.select('#selected-outline').attr('d',f?path(f):null);
 }
