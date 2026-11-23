@@ -128,3 +128,11 @@ main{padding:0 4%}.masthead{padding:56px 0 44px;display:flex;justify-content:spa
 .rel-color-legend[hidden]{display:none!important}
 .rel-color-legend strong{color:#527d6e;font-size:10px;font-weight:700}
 .rel-color-ramp{width:118px;height:10px;border-radius:4px;background:linear-gradient(90deg,#c8e1d6,#246e63);display:inline-block}
+
+/* Source-aware county demographic/health/crime spotlight. */
+.county-extended{margin-top:22px;border-top:1px solid var(--edge);padding-top:14px}
+.county-extended summary{cursor:pointer;font-size:12px;font-weight:700;color:#236f62;padding:8px 0}
+.county-extended summary:hover{color:#165148}
+.county-extended .stats-split{padding:14px 0 9px;gap:15px 12px}
+.county-extended .stats-split b{font-size:16px}
+.county-extended .county-metric-notice{font-size:11px;color:#6b8578;line-height:1.6;margin-top:10px}

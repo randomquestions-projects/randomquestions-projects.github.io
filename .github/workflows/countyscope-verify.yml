@@ -32,7 +32,7 @@ jobs:
           node --check county-atlas/relationships-stats.js
           node --check county-atlas/relationships.js
       - name: Verify snapshot handling without external credentials
-        run: node --test county-atlas/tests/county-data.test.cjs county-atlas/tests/relationships.test.cjs
+        run: node --test county-atlas/tests/county-data.test.cjs county-atlas/tests/relationships.test.cjs county-atlas/tests/extended-metrics.test.cjs
       - name: Inspect optional county-metrics release
         run: |
           python3 - <<'PY'
