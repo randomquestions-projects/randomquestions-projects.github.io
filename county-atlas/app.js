@@ -82,6 +82,7 @@ async function published(){
 }
 function renderMap(){
  const vals=S.features.filter(acceptable).map(f=>val(row(String(f.id)))).filter(n=>n!=null&&(isSeda()||n>0));
+ const visible=S.features.filter(acceptable).map(f=>val(row(String(f.id)))).filter(n=>n!=null);
  const q=d3.scaleQuantile().domain(vals.length?vals:[1]).range(colors);
  const maxAbs=isSeda()?Math.max(0.1,d3.max(vals.map(Math.abs))||0.1):1;
  const diverge=d3.scaleLinear().domain([-maxAbs,0,maxAbs]).range(['#ba5260','#f0f3ed','#257964']).clamp(true);
@@ -89,15 +90,16 @@ function renderMap(){
    const n=val(row(String(f.id)));
    return n==null?'#edf0ef':isSeda()?diverge(n):n===0?'#f3f8f4':q(n);
  }).style('opacity',f=>acceptable(f)?1:.17);
- document.querySelectorAll('.legend-ramp i').forEach((el,i)=>{el.style.background=isSeda()?diverge(-maxAbs+i*maxAbs/3):colors[i];});
+ document.querySelectorAll('.legend-ramp i').forEach((el,i)=>{el.style.background=visible.length===0?'#e4e9e7':isSeda()?diverge(-maxAbs+i*maxAbs/3):colors[i];});
  const lowLabel=document.querySelector('.legend-labels span:first-child');
- if(lowLabel)lowLabel.textContent=isSeda()&&vals.length?presentation(d3.min(vals)):'Low';
- $('legend-mid').textContent=isSeda()?'0.00 SD':presentation(d3.median(vals)||0);
- $('legend-high').textContent=vals.length?presentation(d3.max(vals)):'—';
+ if(lowLabel)lowLabel.textContent=visible.length===0?'No data':isSeda()&&vals.length?presentation(d3.min(vals)):'Low';
+ $('legend-mid').textContent=visible.length===0?'—':isSeda()?'0.00 SD':presentation(d3.median(vals)||0);
+ $('legend-high').textContent=visible.length===0?'—':presentation(d3.max(visible));
  $('map-title').textContent=titles[S.variable];
 
  const ratio=isRatio();
  $('measurement').disabled=!canNormalize(); // Ratios, income and shares have fixed units.
+ $('measurement').options[0].textContent=canNormalize()?'Total counts':'Reported value';
  if(!canNormalize()){S.mode='count';$('measurement').value='count';}
  $('map-subtitle').textContent=isExtra()?E.metrics[S.variable].year+' · '+E.metrics[S.variable].label:ratio
   ? (S.variable==='ratio'
@@ -146,7 +148,7 @@ function renderMap(){
  renderSide();rankings();
  const available=isExtra()?E.ready[E.metrics[S.variable].group]:(S.variable==='schools'||isRatio())?S.ready.public&&S.ready.private&&(!isRatio()||S.ready.churches):S.ready[S.variable];
  const waiting=isSeda()?false:isExtra()?E.pending:S.pending;
- const status=isSeda()?(available?'SEDA 6.0 · verified source':'SEDA 6.0 · data and publication permission required'):waiting?'Loading national data…':available?'Official datasets · loaded':'Data source unavailable'+(isExtra()?' · Census API may require a key':'');
+ const status=isSeda()?(available?'SEDA 6.0 · verified source':'SEDA 6.0 · permission required'):waiting?(isExtra()?'Loading saved county metrics…':'Loading national data…'):available?'Verified county data · loaded':isExtra()?'County data not published yet':'Data source unavailable';
  $('data-state').textContent=status;
  $('data-state').classList.toggle('warning',!waiting&&!available);
 }
