@@ -192,7 +192,7 @@ function renderSide(){
   const ids=['race_white_nh','race_black_nh','ethnicity_hispanic','race_asian_nh','race_multiracial_nh',
    'health_obesity','health_diabetes','health_depression','health_smoking','health_inactivity',
    'health_poor_mental','mortality_homicide','mortality_firearm_homicide',
-   'mortality_suicide','mortality_overdose','violent_crime_rate','juvenile_delinquency_rate'];
+   'mortality_suicide','mortality_overdose','juvenile_delinquency_rate'];
   for(const id of ids){
    const meta=E.metrics[id];if(!meta||!E.ready[meta.group])continue;
    const slot=document.createElement('div'),caption=document.createElement('span'),value=document.createElement('b');

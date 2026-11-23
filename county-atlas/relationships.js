@@ -60,7 +60,7 @@ const name=f=>(f.properties?.name||'County')+', '+(state.stateNames?.get(String(
 const available=id=>{
  if(!id||!METRICS[id])return false;
  if(id.startsWith('seda_'))return E.ready.seda===true;
- if(E.metrics[id]&&['race','places','mortality','chrr'].includes(E.metrics[id].group))return E.ready[E.metrics[id].group]===true;
+ if(E.metrics[id]&&['race','places','mortality','chrr'].includes(E.metrics[id].group))return E.ready[E.metrics[id].group]===true && (!E.fieldCoverage||E.fieldCoverage[id]>0);
  if(['college','highschool','income','veteran_share','veterans_per_10k'].includes(id))return E.ready.acs===true;
  if(id.startsWith('armed_forces'))return E.ready.military===true;
  if(id==='self_employed')return E.ready.self===true;
