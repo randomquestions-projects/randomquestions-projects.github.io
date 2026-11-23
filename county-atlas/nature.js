@@ -107,13 +107,23 @@ async function init(){
    $(id).addEventListener(id==='nature-search'?'input':'change',render);
   }
   ready=true;
+  $('nature-data-unavailable').hidden=true;
+  $('nature-svg').hidden=false;
   status.textContent='Verified park catalogue · '+parkData.length+' sites · source: Park Atlas / NPS';
   detail(null);
   render();
  }catch(e){
-  status.textContent=e.message||'National parks dataset unavailable';
+  status.textContent='Unavailable on public GitHub Pages';
+  const missing=$('nature-data-unavailable');
+  if(missing)missing.hidden=false;
+  $('nature-svg').hidden=true;
+  for(const id of ['nature-category','nature-state','nature-search']){
+   const el=$(id);
+   if(el)el.disabled=true;
+  }
+  $('nature-count').textContent='Private dataset';
   const result=$('nature-results');
-  if(result)result.textContent='The parks locator will appear after its source-validation pipeline publishes a snapshot.';
+  if(result)result.textContent='The verified park catalogue is preserved in the private repository. The authenticated site is not yet deployed.';
  }
 }
 window.CountyNature={init};
