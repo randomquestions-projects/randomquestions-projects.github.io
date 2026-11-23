@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <meta name="description" content="CountyScope: an interactive US county choropleth of schools and religious congregations from NCES and US Religion Census data.">
-<title>CountyScope | Churches & Schools Across America</title>
+<title>CountyScope | U.S. Counties: Education, Demographics, Health & Public Safety</title>
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="styles.css">
 <script defer src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
@@ -27,7 +27,7 @@
     <div class="masthead">
       <div><div class="eyebrow">A GEOGRAPHIC DATA EXPLORER <span class="dot"></span> 50 STATES + D.C.</div>
       <h1>America, <em>county by county.</em></h1>
-      <p>How many schools and religious congregations are in every county? Explore the geography behind the numbers, compare counties, and inspect individual school listings.</p></div>
+      <p>Explore education, faith, demographics, income, public health and fatal violence across U.S. counties. Compare trends through the map and statistical analysis, with transparent sources and missing-data coverage.</p></div>
       <div class="yearnote"><span>PUBLIC SOURCES</span><strong>NCES + USRC</strong><small>2024–25 schools · 2020 congregations</small></div>
     </div>
 
@@ -42,6 +42,34 @@
 <option value="seda_achievement" disabled>Test achievement · overall (permission required)</option>
 <option value="seda_math" disabled>Test achievement · math (permission required)</option>
 <option value="seda_reading" disabled>Test achievement · reading (permission required)</option>
+</optgroup>
+<optgroup label="Race & ethnicity · ACS 2024">
+<option value="race_white_nh">White, non-Hispanic (%)</option>
+<option value="race_black_nh">Black, non-Hispanic (%)</option>
+<option value="race_native_nh">American Indian / Alaska Native, non-Hispanic (%)</option>
+<option value="race_asian_nh">Asian, non-Hispanic (%)</option>
+<option value="race_pacific_nh">Pacific Islander, non-Hispanic (%)</option>
+<option value="race_multiracial_nh">Two or more races, non-Hispanic (%)</option>
+<option value="race_other_nh">Other race, non-Hispanic (%)</option>
+<option value="ethnicity_hispanic">Hispanic / Latino, any race (%)</option>
+</optgroup>
+<optgroup label="Public health · CDC PLACES 2025, modeled">
+<option value="health_obesity">Adult obesity (%)</option>
+<option value="health_diabetes">Diagnosed diabetes (%)</option>
+<option value="health_depression">Diagnosed depression (%)</option>
+<option value="health_smoking">Current smoking (%)</option>
+<option value="health_inactivity">No leisure-time physical activity (%)</option>
+<option value="health_short_sleep">Short sleep (%)</option>
+<option value="health_poor_mental">Frequent poor mental health (%)</option>
+<option value="health_binge_drinking">Binge drinking (%)</option>
+<option value="health_food_insecurity">Food insecurity (% · limited coverage)</option>
+</optgroup>
+<optgroup label="Fatal violence & injury · CDC NVSS per 100,000">
+<option value="mortality_homicide">Homicide deaths / 100K</option>
+<option value="mortality_firearm_homicide">Firearm homicide deaths / 100K</option>
+<option value="mortality_suicide">Suicide deaths / 100K</option>
+<option value="mortality_overdose">Overdose deaths / 100K</option>
+<option value="mortality_firearm">All firearm deaths / 100K</option>
 </optgroup>
 <optgroup label="Education & attainment">
 <option value="highschool">High school diploma+ · adults 25+ (%)</option>
@@ -89,6 +117,10 @@
 <div><span>SEDA achievement · grades 3–8</span><b id="selected-seda-overall">—</b></div>
 <div><span>SEDA math</span><b id="selected-seda-math">—</b></div>
 <div><span>SEDA reading</span><b id="selected-seda-reading">—</b></div></div>
+            <details class="county-extended" id="extended-summary" hidden><summary>Race, health &amp; injury details</summary>
+              <div class="stats-split" id="selected-extended"></div>
+              <p class="county-metric-notice">CDC PLACES prevalence is modeled; homicide, firearm and overdose death rates reflect county of residence rather than incident location. Small-area mortality rates can be Bayesian estimates. Missing values are not zeros.</p>
+            </details>
             <p class="county-metric-notice" id="county-metric-notice" hidden>Additional county statistics have not been published yet. Church and school counts remain available.</p>
             <button id="open-directory" type="button" class="open-directory" disabled>Explore local listings <span>↗</span></button>
           </div>
@@ -197,6 +229,7 @@
       <div class="rel-method-notes">
         <p id="rel-weight-hint">Each county contributes equally to the leading correlation. Population-weighted r appears in the statistical table.</p>
         <p><strong>Important:</strong> These are ecological, cross-sectional county associations, not evidence of causation or individual behavior. Armed Forces residents (% ages 16+) is <strong>not</strong> annual Army enlistment or recruiting rates. Rates using 2020 population are population-normalized proxies from different dataset years. SEDA performance cannot be plotted unless authorized scores are published. Spatial clustering, bases, age differences, selection effects and outliers can influence results.</p>
+        <p>Demographic shares are county aggregates and must not be interpreted as individual characteristics or predictive explanations of crime. CDC PLACES health metrics are modeled; mortality metrics are resident death rates, not police-recorded incidents. Sources span different years and reporting standards. Avoid causal interpretations.</p>
         <p>Regression coefficients are descriptive standardized ordinary least squares on complete paired counties. Optional controls and interactions are county-level, unweighted by default. The interaction term estimates whether the X–Y slope varies with a third metric; it does not prove that metric causes the variation.</p>
       </div>
     </section>
@@ -215,6 +248,10 @@
         <article><span>06 / SELF-EMPLOYMENT</span><h3>Workforce structure</h3><p>ACS class-of-worker table B24080. Self-employed resident workers in incorporated and unincorporated businesses are divided by employed workers.</p><a href="https://api.census.gov/data/2024/acs/acs5/groups/B24080.html" target="_blank" rel="noopener">Class-of-worker table ↗</a></article>
         <article><span>07 / SMALL BUSINESS</span><h3>CBP and Nonemployer Statistics</h3><p>2023 employer establishments with 1–4 employees and 2024 businesses without paid employees (nonemployers).</p><a href="https://www.census.gov/data/developers/data-sets/nonemp-api/2024.html" target="_blank" rel="noopener">Nonemployer statistics ↗</a></article>
         <article><span>08 / STARTUP ACTIVITY</span><h3>Establishment births</h3><p>2023 Business Dynamics Statistics: new employer establishments during the prior 12 months, not new firms or unique entrepreneurs.</p><a href="https://www.census.gov/programs-surveys/bds.html" target="_blank" rel="noopener">Business Dynamics Statistics ↗</a></article>
+        <article><span>10 / DEMOGRAPHICS</span><h3>Race &amp; Hispanic ethnicity</h3><p>2024 ACS five-year B03002 county estimates. Hispanic/Latino includes people of any race; the seven race categories are non-Hispanic, mutually exclusive with Hispanic ethnicity. These are county population shares, not person-level characteristics or causal predictors.</p><a href="https://api.census.gov/data/2024/acs/acs5/groups/B03002.html" target="_blank" rel="noopener">ACS B03002 data dictionary ↗</a></article>
+        <article><span>11 / PUBLIC HEALTH</span><h3>CDC PLACES 2025</h3><p>County-level crude adult prevalence estimates. CDC models these using surveys and Census variables; they are not direct counts of medical diagnoses. Health-related social-needs measures do not cover every state. Missing measures are withheld, and national summaries show medians of reported counties, not national prevalence.</p><a href="https://data.cdc.gov/d/swc5-untb" target="_blank" rel="noopener">PLACES 2025 county data ↗</a></article>
+        <article><span>12 / FATAL VIOLENCE &amp; INJURY</span><h3>CDC mortality by residence</h3><p>Annual NVSS homicide, firearm homicide, suicide, overdose and total firearm death rates per 100,000 residents. Source year is selected coherently by release. Small-county rates may use Bayesian smoothing to protect privacy. Not interchangeable with FBI offenses, violent crime incidence, or police use-of-force events.</p><a href="https://data.cdc.gov/d/psx4-wq38" target="_blank" rel="noopener">CDC injury and violence rates ↗</a></article>
+        <article><span>13 / RESEARCH GAPS</span><h3>Police violence, crimes, kidnapping &amp; pornography usage</h3><p>County-specific FBI violent crime, crime clearances, kidnappings and crimes involving children require an independently validated law-enforcement reporting crosswalk and reporting coverage. National county-level police brutality measures lack a consistent official definition. No credible, representative public county pornography-consumption dataset has been verified. None of these are shown as invented or zero-valued layers.</p><a href="https://cde.ucr.cjis.gov/" target="_blank" rel="noopener">FBI Crime Data Explorer ↗</a></article>
       </div>
     </section>
   </main>
