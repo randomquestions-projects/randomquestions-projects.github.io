@@ -261,7 +261,11 @@ function renderStats(points,a){
  cov.textContent=normal(points.length)+' counties in comparison · '+normal(missing)+' missing one or both selected measures';
  const matrixList=[state.x,state.y,'income','college','highschool','armed_forces_share','veteran_share','self_employed'];
  const keys=[...new Set(matrixList)].filter(id=>available(id)).slice(0,6);
- const matrix=engine.correlationMatrix(points,keys);
+ // Pairwise matrix uses every county in the active geographic/population scope.
+ // Each cell then filters to non-missing observations for its own two metrics.
+ const matrixUniverse=state.features.filter(f=>(!state.state||String(f.id).startsWith(state.state))&&(get(f).population||0)>=state.minimum)
+   .map(f=>({values:lookup(f)}));
+ const matrix=engine.correlationMatrix(matrixUniverse,keys);
  const head=$('rel-matrix-head');head.replaceChildren();
  for(const label of ['Variable',...keys.map(k=>METRICS[k].label)]){
   const cell=document.createElement('th');cell.textContent=label;head.append(cell);
@@ -319,6 +323,7 @@ function render(){
  const points=rows(),a=engine.assess(points);
  state.points=points;state.lastAssess=a;
  setNode('rel-counties',normal(points.length));
+ setNode('rel-pearson-label',state.weight?'POPULATION-WEIGHTED PEARSON':'PEARSON CORRELATION');
  setNode('rel-pearson',readable(state.weight?a.weightedPearson:a.pearson));
  setNode('rel-spearman',readable(a.spearman));
  setNode('rel-r2',readable(a.r2));
@@ -340,8 +345,9 @@ function render(){
 }
 function highlightLabel(){
  const row=state.points.find(p=>p.fips===state.selected);
- setNode('rel-selected-county',row?row.label:'Select a county');
- setNode('rel-selected-values',row?METRICS[state.x].label+': '+fmt(state.x,row.x)+' · '+METRICS[state.y].label+': '+fmt(state.y,row.y):'Click a dot or county to inspect its values');
+ const selectedFeature=state.features.find(f=>String(f.id)===state.selected);
+ setNode('rel-selected-county',row?row.label:selectedFeature?name(selectedFeature):'Select a county');
+ setNode('rel-selected-values',row?METRICS[state.x].label+': '+fmt(state.x,row.x)+' · '+METRICS[state.y].label+': '+fmt(state.y,row.y):selectedFeature?'No complete X/Y pair for this county':'Click a dot or county to inspect its values');
 }
 function activeTab(tab){
  const relationships=tab==='relationships';
