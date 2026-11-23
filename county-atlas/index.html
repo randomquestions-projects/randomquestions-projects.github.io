@@ -14,6 +14,7 @@
 <script defer src="seda.js"></script>
 <script defer src="relationships-stats.js"></script>
 <script defer src="relationships.js"></script>
+<script defer src="nature.js"></script>
 <script defer src="app.js"></script>
 </head>
 <body>
@@ -34,6 +35,7 @@
     <nav class="cs-tabs" role="tablist" aria-label="CountyScope views">
       <button id="cs-tab-map" type="button" role="tab" aria-controls="county-map-view" aria-selected="true"><span>◈</span> County map</button>
       <button id="cs-tab-relationships" type="button" role="tab" aria-controls="relationships-view" aria-selected="false"><span>↗</span> Relationships & analysis</button>
+      <button id="cs-tab-nature" type="button" role="tab" aria-controls="nature-view" aria-selected="false"><span>♣</span> Parks & nature</button>
     </nav>
     <section id="county-map-view" class="workspace" role="tabpanel" aria-labelledby="cs-tab-map" aria-label="Interactive county map explorer">
       <div class="toolbar">
@@ -234,6 +236,36 @@
         <p><strong>Important:</strong> These are ecological, cross-sectional county associations, not evidence of causation or individual behavior. Armed Forces residents (% ages 16+) is <strong>not</strong> annual Army enlistment or recruiting rates. Rates using 2020 population are population-normalized proxies from different dataset years. SEDA performance cannot be plotted unless authorized scores are published. Spatial clustering, bases, age differences, selection effects and outliers can influence results.</p>
         <p>Demographic shares are county aggregates and must not be interpreted as individual characteristics or predictive explanations of crime. CDC PLACES health metrics are modeled; mortality metrics are resident death rates, not police-recorded incidents. Sources span different years and reporting standards. Avoid causal interpretations.</p>
         <p>Regression coefficients are descriptive standardized ordinary least squares on complete paired counties. Optional controls and interactions are county-level, unweighted by default. The interaction term estimates whether the X–Y slope varies with a third metric; it does not prove that metric causes the variation.</p>
+      </div>
+    </section>
+
+
+    <section id="nature-view" class="nature-view" role="tabpanel" aria-labelledby="cs-tab-nature" hidden>
+      <div class="rel-heading"><div>
+        <div class="mini-label">EXPLORE THE OUTDOORS / UNITED STATES</div>
+        <h2>National parks <em>&amp; nature.</em></h2>
+        <p>Explore the National Park System and related sites, from iconic national parks to monuments, historic parks and national seashores. Click a map marker or search the park directory to inspect official-source details.</p>
+      </div><span class="rel-status" id="nature-status">Loading verified park locations…</span></div>
+      <div class="nature-controls panel">
+        <label><span>PLACES TO SHOW</span><select id="nature-category">
+          <option value="national">National parks</option><option value="units">All official NPS units</option>
+          <option value="monuments">National monuments</option><option value="coastal">Coasts &amp; islands</option>
+          <option value="historic">Historic &amp; memorial sites</option><option value="all">All sites &amp; related areas</option>
+        </select></label>
+        <label><span>STATE</span><select id="nature-state"><option value="">All states</option></select></label>
+        <label><span>SEARCH</span><input id="nature-search" type="search" placeholder="Find a park…" autocomplete="off"></label>
+      </div>
+      <div class="nature-layout">
+        <section class="panel nature-map-card"><div class="panel-title"><div><span class="mini-label">NATIONAL PARK SYSTEM / REFERENCE LOCATIONS</span><h2>Explore by location</h2></div><span id="nature-count">—</span></div>
+          <svg id="nature-svg" viewBox="0 0 1000 610" role="img" aria-label="Clickable United States national park map"></svg>
+          <p class="nature-foot">Gold markers are national parks; green markers are other NPS units or related sites. Locations indicate reference coordinates, not public entrances or driving directions. Dataset is a validated CC0 aggregation from Park Atlas, derived from National Park Service records.</p>
+        </section>
+        <aside class="panel nature-details">
+          <div class="panel-title"><div><span class="mini-label">PARK SPOTLIGHT</span><h2>About this place</h2></div></div>
+          <div id="nature-selected" class="nature-selected"><p>Select a park marker.</p></div>
+          <div class="nature-list-header"><span class="mini-label">BROWSE LOCATIONS</span></div>
+          <div id="nature-results" class="nature-list"></div>
+        </aside>
       </div>
     </section>
 
