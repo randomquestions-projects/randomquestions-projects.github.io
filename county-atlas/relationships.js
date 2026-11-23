@@ -131,7 +131,11 @@ function renderScatter(points,assessment){
  const xx=d3.scaleLinear().domain(extent(points.map(p=>p.x))).range([left,W-right]).nice();
  const yy=d3.scaleLinear().domain(extent(points.map(p=>p.y))).range([H-bottom,top]).nice();
  const g=svg.append('g');
- const color=state.color!=='none'?d3.scaleSequential().domain(d3.extent(points.map(p=>p.color).filter(valid))).interpolator(d3.interpolateRgb('#c8e1d6','#246e63')):null;
+ const colorValues=points.map(p=>p.color).filter(valid);
+ const colorRange=d3.extent(colorValues);
+ const color=state.color!=='none'&&colorValues.length?d3.scaleSequential().domain(colorRange).interpolator(d3.interpolateRgb('#c8e1d6','#246e63')):null;
+ const legend=$('rel-color-legend');legend.hidden=!color;
+ if(color){setNode('rel-color-name',METRICS[state.color].label);setNode('rel-color-min',fmt(state.color,colorRange[0]));setNode('rel-color-max',fmt(state.color,colorRange[1]));}
  g.append('g').attr('transform','translate(0,'+(H-bottom)+')').call(d3.axisBottom(xx).ticks(7).tickFormat(d=>formatTick(state.x,d))).call(x=>x.selectAll('text').attr('font-size',12));
  g.append('g').attr('transform','translate('+left+',0)').call(d3.axisLeft(yy).ticks(6).tickFormat(d=>formatTick(state.y,d))).call(x=>x.selectAll('text').attr('font-size',12));
  g.append('g').attr('class','scatter-grid').attr('transform','translate('+left+',0)').call(d3.axisLeft(yy).tickSize(-(W-right-left)).tickFormat('')).select('.domain').remove();
