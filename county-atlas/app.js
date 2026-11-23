@@ -37,7 +37,7 @@ const congregationsPer100Schools = r => {
 };
 const compare = r => !r?null:S.variable==='schools'?schoolTotal(r):S.variable==='ratio'?schoolsPer100(r):S.variable==='congregations_ratio'?congregationsPer100Schools(r):r[S.variable];
 function val(r) { if(!r)return null;const n=compare(r);return n==null||!Number.isFinite(n)?null:canNormalize()&&S.mode==='rate'?(r.population>0?n*10000/r.population:null):n; }
-const presentation=n=>n==null||!Number.isFinite(n)?'—':isSeda()?(n>0?'+':'')+n.toFixed(2)+' SD':E.metrics[S.variable]?.kind==='money'?'$'+fmt(n):E.metrics[S.variable]?.kind==='percent'?n.toFixed(1)+'%':isRatio()||(canNormalize()&&S.mode==='rate')?n.toFixed(1):fmt(n);
+const presentation=n=>n==null||!Number.isFinite(n)?'—':isSeda()?(n>0?'+':'')+n.toFixed(2)+' SD':E.metrics[S.variable]?.kind==='money'?'$'+fmt(n):E.metrics[S.variable]?.kind==='percent'?n.toFixed(1)+'%':E.metrics[S.variable]?.kind==='rate'?n.toFixed(1):isRatio()||(canNormalize()&&S.mode==='rate')?n.toFixed(1):fmt(n);
 function acceptable(f) { return (!S.stateId||String(f.id).startsWith(S.stateId))&&(!S.search||(full(f)+' '+f.id).toLowerCase().includes(S.search)); }
 async function fetchData(url,timeout=35000) {
  const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);
@@ -101,12 +101,12 @@ function renderMap(){
  $('measurement').disabled=!canNormalize(); // Ratios, income and shares have fixed units.
  $('measurement').options[0].textContent=canNormalize()?'Total counts':'Reported value';
  if(!canNormalize()){S.mode='count';$('measurement').value='count';}
- $('map-subtitle').textContent=isExtra()?E.metrics[S.variable].year+' · '+E.metrics[S.variable].label:ratio
+ $('map-subtitle').textContent=isExtra()?((E.sourceLabels[E.metrics[S.variable].group]||E.metrics[S.variable].year)+' · '+E.metrics[S.variable].label):ratio
   ? (S.variable==='ratio'
       ? '2024–25 public + 2023–24 private K–12 schools ÷ 2020 USRC congregations × 100'
       : '2020 USRC congregations ÷ (2024–25 public + 2023–24 private K–12 schools) × 100')
   : (S.variable==='churches'?'2020 U.S. Religion Census':S.variable==='private'?'2023–24 NCES':S.variable==='public'?'2024–25 NCES':'2024–25 public + 2023–24 private')+' · '+(S.mode==='rate'?'per 10,000 residents':'recorded location counts');
- $('source-year').textContent=isExtra()?E.metrics[S.variable].year:ratio?'NCES / USRC':S.variable==='churches'?'2020':'NCES';
+ $('source-year').textContent=isExtra()?(E.sourceLabels[E.metrics[S.variable].group]||E.metrics[S.variable].year):ratio?'NCES / USRC':S.variable==='churches'?'2020':'NCES';
  const rows=S.features.filter(acceptable).map(f=>row(String(f.id)));
  $('summary-heading').textContent=ratio?(S.variable==='ratio'?'SCHOOLS / CONGREGATIONS':'CONGREGATIONS / SCHOOLS'):isExtra()?'SELECTED METRIC':'NATIONAL TOTAL';
  if(isSeda()){
@@ -116,12 +116,25 @@ function renderMap(){
   $('total-label').textContent='Unweighted average of reporting counties · not student-weighted';
   $('county-coverage').textContent=fmt(values.length)+' counties with achievement estimates';
  }else if(isExtra() && E.metrics[S.variable].kind==='percent'){
-  const metric=E.metrics[S.variable],complete=rows.filter(r=>r[metric.numerator]!=null&&r[metric.denominator]>0);
-  const numerator=complete.reduce((n,r)=>n+r[metric.numerator],0);
-  const denominator=complete.reduce((n,r)=>n+r[metric.denominator],0);
-  $('total').textContent=denominator>0?(100*numerator/denominator).toFixed(1)+'%':'—';
-  $('total-label').textContent=names[S.variable]+' · pooled share of reporting counties';
-  $('county-coverage').textContent=fmt(complete.length)+' counties reporting';
+  const metric=E.metrics[S.variable];
+  if(metric.numerator&&metric.denominator){
+    const complete=rows.filter(r=>r[metric.numerator]!=null&&r[metric.denominator]>0);
+    const numerator=complete.reduce((n,r)=>n+r[metric.numerator],0);
+    const denominator=complete.reduce((n,r)=>n+r[metric.denominator],0);
+    $('total').textContent=denominator>0?(100*numerator/denominator).toFixed(1)+'%':'—';
+    $('total-label').textContent=names[S.variable]+' · pooled share of reporting counties';
+    $('county-coverage').textContent=fmt(complete.length)+' counties reporting';
+  }else{
+    const values=rows.map(r=>r[S.variable]).filter(Number.isFinite);
+    $('total').textContent=values.length?d3.median(values).toFixed(1)+'%':'—';
+    $('total-label').textContent='Median reporting county · not a national population-weighted prevalence';
+    $('county-coverage').textContent=fmt(values.length)+' counties reporting';
+  }
+ }else if(isExtra() && E.metrics[S.variable].kind==='rate'){
+  const values=rows.map(r=>r[S.variable]).filter(Number.isFinite);
+  $('total').textContent=values.length?d3.median(values).toFixed(1):'—';
+  $('total-label').textContent='Median of reporting county death rates per 100K · not national rate';
+  $('county-coverage').textContent=fmt(values.length)+' counties reporting';
  }else if(isExtra() && E.metrics[S.variable].kind==='money'){
   const values=rows.map(r=>r.income).filter(n=>n!=null&&Number.isFinite(n));
   $('total').textContent=values.length?'$'+fmt(d3.median(values)):'—';
@@ -172,6 +185,23 @@ function renderSide(){
  ['selected-seda-reading',r?.seda_reading==null?'—':(r.seda_reading>0?'+':'')+r.seda_reading.toFixed(2)+' SD'],
  ['selected-self',r?.self_employed==null?'—':r.self_employed.toFixed(1)+'%'],
  ['selected-nonemp',fmt(r?.nonemployer)]]){const element=$(id);if(element)element.textContent=value;}
+ // Show only validated county-level values; never backfill missing data.
+ const extended=$('selected-extended');
+ if(extended){
+  extended.replaceChildren();
+  const ids=['race_white_nh','race_black_nh','ethnicity_hispanic','race_asian_nh','race_multiracial_nh',
+   'health_obesity','health_diabetes','health_depression','health_smoking','health_inactivity',
+   'health_poor_mental','mortality_homicide','mortality_firearm_homicide',
+   'mortality_suicide','mortality_overdose'];
+  for(const id of ids){
+   const meta=E.metrics[id];if(!meta||!E.ready[meta.group])continue;
+   const slot=document.createElement('div'),caption=document.createElement('span'),value=document.createElement('b');
+   caption.textContent=meta.label;
+   value.textContent=r?.[id]==null?'—':meta.kind==='percent'?r[id].toFixed(1)+'%':r[id].toFixed(1);
+   slot.append(caption,value);extended.append(slot);
+  }
+  const heading=$('extended-summary');if(heading)heading.hidden=extended.childElementCount===0;
+ }
  const groupMap={'selected-income':'acs','selected-hs':'acs','selected-college':'acs','selected-veterans':'acs','selected-military':'military','selected-self':'self','selected-nonemp':'nonemp','selected-seda-overall':'seda','selected-seda-math':'seda','selected-seda-reading':'seda'};
  for(const [id,group] of Object.entries(groupMap)){
   const element=$(id);
