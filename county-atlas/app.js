@@ -81,6 +81,7 @@ async function published(){
  }catch(e){ /* Live NCES and Census fallback below. */ }
 }
 function renderMap(){
+ for(const [key,meta] of Object.entries(E.metrics)){titles[key]=meta.title;names[key]=meta.label;}
  const vals=S.features.filter(acceptable).map(f=>val(row(String(f.id)))).filter(n=>n!=null&&(isSeda()||n>0));
  const visible=S.features.filter(acceptable).map(f=>val(row(String(f.id)))).filter(n=>n!=null);
  const q=d3.scaleQuantile().domain(vals.length?vals:[1]).range(colors);
