@@ -151,6 +151,7 @@ function renderMap(){
  const status=isSeda()?(available?'SEDA 6.0 · verified source':'SEDA 6.0 · permission required'):waiting?(isExtra()?'Loading saved county metrics…':'Loading national data…'):available?'Verified county data · loaded':isExtra()?'County data not published yet':'Data source unavailable';
  $('data-state').textContent=status;
  $('data-state').classList.toggle('warning',!waiting&&!available);
+ window.CountyRelationships?.refresh?.();
 }
 function renderSide(){
  const f=S.selected,r=f?row(String(f.id)):null;
@@ -180,6 +181,7 @@ function renderSide(){
  if(notice)notice.hidden=E.ready.acs===true||E.pending>0;
  $('open-directory').disabled=!f;
  d3.select('#selected-outline').attr('d',f?path(f):null);
+ window.CountyRelationships?.highlightCounty?.(f?String(f.id):null);
 }
 function rankings(){
  const list=S.features.filter(acceptable).map(f=>({f,n:val(row(String(f.id)))})).filter(x=>x.n!=null)
@@ -288,6 +290,13 @@ function mapInit(){
  $('zoom-in').addEventListener('click',()=>svg.transition().duration(300).call(zoom.scaleBy,1.5));
  $('zoom-out').addEventListener('click',()=>svg.transition().duration(300).call(zoom.scaleBy,1/1.5));
  $('zoom-reset').addEventListener('click',resetZoom);
+ window.CountyRelationships?.init?.({
+   features:S.features,
+   rows:S.rows,
+   topology,
+   stateNames:S.stateNames,
+   selectCounty:select
+ });
 }
 function controls(){
  $('variable').addEventListener('change',e=>{S.variable=e.target.value;if(!canNormalize())S.mode='count';renderMap();});
