@@ -84,5 +84,16 @@ window.RQ_PROJECTS = [
     searchKeywords: ['churches', 'congregations', 'schools', 'public', 'private', 'religion census', 'NCES', 'counties', 'map', 'choropleth', 'graduation', 'education', 'veterans', 'armed forces', 'household income', 'small business', 'startup', 'self employed'],
     url: 'https://randomquestions-projects.github.io/county-atlas/',
     theme: 'default'
+  },
+  {
+    id: 'nfl-qb-clutch',
+    title: 'NFL Drive Analytics Lab',
+    shortName: 'QB',
+    domain: 'NFL DRIVE PERFORMANCE',
+    description: 'Explore quarterback clutch rankings, opening and halftime drives, and historical NFL possession and three-and-out trends.',
+    categories: ['NFL', 'Historical Analysis'],
+    searchKeywords: ['football', 'quarterback', 'clutch', 'game winning drive', 'opening drive', 'halftime', 'three and out', 'possessions'],
+    url: 'https://randomquestions-projects.github.io/nfl-qb-clutch/',
+    theme: 'football'
   }
 ];
