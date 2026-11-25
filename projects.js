@@ -76,13 +76,13 @@ window.RQ_PROJECTS = [
   },
   {
     id: 'county-atlas',
-    title: 'CountyScope · Churches & Schools',
+    title: 'CountyScope',
     shortName: 'CS',
     domain: 'U.S. COUNTY GEOGRAPHY',
-    description: 'Explore county choropleths of schools, congregations, adult education, household income, military service, small businesses and self-employment.',
+    description: 'Private geographic data explorer for U.S. counties: education, faith, demographics, income, health, historical trends and nature. Owner login required.',
     categories: ['Demographics', 'Geography'],
     searchKeywords: ['churches', 'congregations', 'schools', 'public', 'private', 'religion census', 'NCES', 'counties', 'map', 'choropleth', 'graduation', 'education', 'veterans', 'armed forces', 'household income', 'small business', 'startup', 'self employed'],
-    url: 'https://randomquestions-projects.github.io/county-atlas/',
+    url: 'https://countyscope-private.balususai.workers.dev/',
     theme: 'default'
   },
   {
