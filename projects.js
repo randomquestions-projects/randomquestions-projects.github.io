@@ -101,7 +101,7 @@ window.RQ_PROJECTS = [
     title: 'Home Advantage Lab',
     shortName: 'HA',
     domain: 'CROSS-SPORT RESEARCH',
-    description: 'Does playing at home matter? Explore published evidence across NFL, NBA, college football and MLB, plus an interactive win-probability simulator. Independent historical models are being validated.',
+    description: 'Does playing at home matter? Explore 88,929 historical NFL, NBA and MLB games, opponent-adjusted home advantage, college football research and an interactive win-probability simulator.',
     categories: ['NFL', 'Historical Analysis'],
     searchKeywords: ['NBA', 'MLB', 'college football', 'home court', 'home field', 'crowds', 'travel', 'stadium', 'home advantage'],
     url: 'https://randomquestions-projects.github.io/home-advantage/',
