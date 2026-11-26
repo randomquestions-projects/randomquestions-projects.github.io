@@ -106,5 +106,16 @@ window.RQ_PROJECTS = [
     searchKeywords: ['NBA', 'MLB', 'college football', 'home court', 'home field', 'crowds', 'travel', 'stadium', 'home advantage'],
     url: 'https://randomquestions-projects.github.io/home-advantage/',
     theme: 'football'
+  },
+  {
+    id: 'youth-sports-atlas',
+    title: 'Youth Sports Atlas',
+    shortName: 'YS',
+    domain: 'YOUTH SPORTS & ACCESS',
+    description: 'Explore youth sports participation across America, high school sport trends, state rankings, football and the economics of access.',
+    categories: ['Sports', 'Demographics'],
+    searchKeywords: ['youth', 'children', 'enrollment', 'participation', 'football', 'basketball', 'soccer', 'cost', 'income', 'affordability', 'geography'],
+    url: 'https://randomquestions-projects.github.io/youth-sports-atlas/',
+    theme: 'default'
   }
 ];
