@@ -95,5 +95,16 @@ window.RQ_PROJECTS = [
     searchKeywords: ['football', 'quarterback', 'clutch', 'game winning drive', 'opening drive', 'halftime', 'three and out', 'possessions'],
     url: 'https://randomquestions-projects.github.io/nfl-qb-clutch/',
     theme: 'football'
+  },
+  {
+    id: 'home-advantage',
+    title: 'Home Advantage Lab',
+    shortName: 'HA',
+    domain: 'CROSS-SPORT RESEARCH',
+    description: 'Does playing at home matter? Explore published evidence across NFL, NBA, college football and MLB, plus an interactive win-probability simulator. Independent historical models are being validated.',
+    categories: ['NFL', 'Historical Analysis'],
+    searchKeywords: ['NBA', 'MLB', 'college football', 'home court', 'home field', 'crowds', 'travel', 'stadium', 'home advantage'],
+    url: 'https://randomquestions-projects.github.io/home-advantage/',
+    theme: 'football'
   }
 ];
