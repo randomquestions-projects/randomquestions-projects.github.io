@@ -1,0 +1,202 @@
+{
+  "schema": 1,
+  "generated": "2026-11-26T16:42:52Z",
+  "status": "V1 · independent historical summary; partial coverage",
+  "sports": {
+    "NFL": {
+      "status": "calculated",
+      "source": "nflverse / Lee Sharpe schedules",
+      "summary": {
+        "n": 6808,
+        "win_pct": 56.04,
+        "ties": 15,
+        "margin": 2.211,
+        "home_score": 23.261,
+        "away_score": 21.05,
+        "adjusted_margin": 2.174,
+        "ci": [
+          1.829,
+          2.519
+        ],
+        "home_log_odds": 0.31715,
+        "equal_team_home_win": 57.86,
+        "equal_team_lift": 7.86,
+        "neutral_n": 75,
+        "estimated_extra_wins": 402.25
+      },
+      "coverage": {
+        "first": "2000-09-03",
+        "last": "2026-11-25",
+        "games": 7181,
+        "regular": 6883,
+        "postseason": 298,
+        "neutral": 102,
+        "seasons": [
+          2000,
+          2001,
+          2002,
+          2003,
+          2004,
+          2005,
+          2006,
+          2007,
+          2008,
+          2009,
+          2010,
+          2011,
+          2012,
+          2013,
+          2014,
+          2015,
+          2016,
+          2017,
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024,
+          2025,
+          2026
+        ]
+      },
+      "years": [],
+      "teams": [],
+      "stadiums": [],
+      "drivers": [],
+      "periods": [],
+      "postseason": {}
+    },
+    "NBA": {
+      "status": "calculated",
+      "source": "FiveThirtyEight NBA Elo historical dataset (CC BY 4.0; original game information Basketball Reference)",
+      "summary": {
+        "n": 18037,
+        "win_pct": 59.95,
+        "ties": 0,
+        "margin": 3.129,
+        "home_score": 99.409,
+        "away_score": 96.279,
+        "adjusted_margin": 3.129,
+        "ci": [
+          2.931,
+          3.327
+        ],
+        "home_log_odds": 0.49614,
+        "equal_team_home_win": 62.16,
+        "equal_team_lift": 12.16,
+        "neutral_n": 8,
+        "estimated_extra_wins": 1796.4
+      },
+      "coverage": {
+        "first": "2000-10-31",
+        "last": "2015-06-16",
+        "games": 19282,
+        "regular": 18045,
+        "postseason": 1237,
+        "neutral": 8,
+        "seasons": [
+          2000,
+          2001,
+          2002,
+          2003,
+          2004,
+          2005,
+          2006,
+          2007,
+          2008,
+          2009,
+          2010,
+          2011,
+          2012,
+          2013,
+          2014
+        ]
+      },
+      "years": [],
+      "teams": [],
+      "stadiums": [],
+      "drivers": [],
+      "periods": [],
+      "postseason": {}
+    },
+    "MLB": {
+      "status": "calculated",
+      "source": "Retrosheet gameinfo.csv",
+      "summary": {
+        "n": 61562,
+        "win_pct": 53.77,
+        "ties": 6,
+        "margin": 0.124,
+        "home_score": 4.612,
+        "away_score": 4.488,
+        "adjusted_margin": 0.123,
+        "ci": [
+          0.088,
+          0.157
+        ],
+        "home_log_odds": 0.1577,
+        "equal_team_home_win": 53.93,
+        "equal_team_lift": 3.93,
+        "neutral_n": 0,
+        "estimated_extra_wins": 2320.27
+      },
+      "coverage": {
+        "first": "2000-04-03",
+        "last": "2025-11-01",
+        "games": 62466,
+        "regular": 61562,
+        "postseason": 904,
+        "neutral": 0,
+        "seasons": [
+          2000,
+          2001,
+          2002,
+          2003,
+          2004,
+          2005,
+          2006,
+          2007,
+          2008,
+          2009,
+          2010,
+          2011,
+          2012,
+          2013,
+          2014,
+          2015,
+          2016,
+          2017,
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024,
+          2025
+        ]
+      },
+      "years": [],
+      "teams": [],
+      "stadiums": [],
+      "drivers": [],
+      "periods": [],
+      "postseason": {}
+    },
+    "CFB": {
+      "status": "unavailable",
+      "reason": "Independent FBS run requires configured CollegeFootballData API access. Published external benchmark available.",
+      "source": "CollegeFootballData"
+    }
+  },
+  "attribution": "The information used here was obtained free of charge from and is copyrighted by Retrosheet. Interested parties may contact Retrosheet at 20 Sunset Rd., Newark, DE 19711.",
+  "limitations": [
+    "Independent summaries recovered from successful aggregate-audit logs of private workflow run 45861162409. Artifact upload failed due to storage quota, so annual, team, venue, postseason and driver arrays are not yet available in V1.",
+    "NFL season 2026 is in progress; NBA seasons are labeled by starting year and coverage ends in 2014–15; MLB ends in 2025.",
+    "MLB alternate venues excluded using inferred home sites; neutral MLB games are not represented. The retained ledger is not a certified complete schedule census.",
+    "Raw win share excludes neutral games and counts ties as half; logistic equal-team probability excludes ties. Team strength is retrospectively estimated; these are observational, not causal or prospective forecasts.",
+    "95% approximate scoring intervals cluster by season. League samples cover different years and scoring units."
+  ]
+}
