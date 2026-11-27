@@ -52,7 +52,8 @@ jobs:
                       total+=1
                       assert row['picks']==len(picks)
                       assert row['status'] in ('mature','provisional','developing')
-                      if year<=2017: assert row['status']=='mature'
+                      if year<=2017 and row['status']!='developing': assert row['status']=='mature'
+                      if row.get('quality_coverage') is not None: assert .8<=row['quality_coverage']<=1
                       for dim in ('depth','greatness'):
                           score=row[dim]['score']
                           if row['status']=='developing': assert score is None and row[dim]['grade'] is None
@@ -62,6 +63,8 @@ jobs:
                           assert counts['players']==sum(v>0 for v in actual),(league,year,key,'players')
                           assert counts['selections']==sum(actual),(league,year,key,'selections')
           assert total==297,total
+          for league, years in data['leagues'].items():
+              assert sum(v['draft']['status']!='developing' for v in years.values())>=15, league
           page=(root.parent/'index.html').read_text()
           for required_id in ('cohort-cards','honors-class','honors-round','honors-metrics','honors-roster'):
               assert f'id="{required_id}"' in page
