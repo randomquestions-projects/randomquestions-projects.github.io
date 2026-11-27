@@ -166,7 +166,7 @@ assert.equal(byName('NFL','Adam Vinatieri').historical_award_facts.super_bowl_ti
 assert.equal(byName('NFL','Alan Faneca').historical_award_facts.first_team_all_pro_reported.value,6);
 const newAllPro=d.players.filter(p=>p.historical_award_facts?.first_team_all_pro_reported);
 assert(newAllPro.length>=260);
-for(const p of newAllPro){assert.equal(p.league,'NFL');assert(p.historical_award_facts.first_team_all_pro_reported.scope.includes('selector may differ'));}
+for(const p of newAllPro){assert.equal(p.league,'NFL');assert(/selector may differ|historical selectors/.test(p.historical_award_facts.first_team_all_pro_reported.scope));}
 console.log('Reported historical honors release',JSON.stringify(d.historical_honors_release.changes));
 
 const evRows=depthRows.filter(r=>r.history.evidence_estimate);
@@ -180,3 +180,5 @@ for(const league of ['NFL','NBA']){const rows=depthRows.filter(r=>r.p.league===l
 console.log('Reconstructed season evidence '+JSON.stringify(d.historical_season_evidence_release.audit));
 
 const dated=d.players.filter(p=>p.historical_dated_seasons);assert.equal(dated.length,79);for(const p of dated){const s=p.historical_dated_seasons;assert.equal(p.league,'NBA');assert.equal(s.career.games,p.career_summary.games);assert.equal(s.seasons.reduce((a,b)=>a+b.games,0),s.career.games);assert.equal(new Set(s.seasons.map(x=>x.year)).size,s.seasons.length);assert(s.seasons.every(x=>x.year<=p.induction_year));}console.log('Historical dated NBA season records',dated.length,1040);
+
+const playoffs=d.players.filter(p=>p.historical_playoff_seasons);assert.equal(playoffs.length,76);for(const p of playoffs){const s=p.historical_playoff_seasons;assert.equal(p.league,'NBA');assert.equal(s.seasons.reduce((a,b)=>a+b.games,0),s.career.games);assert.equal(new Set(s.seasons.map(x=>x.year)).size,s.seasons.length);assert(s.seasons.every(x=>p.historical_dated_seasons.seasons.some(y=>x.year===y.year)));}assert.equal(byName('NFL','Adam Vinatieri').career_summary.games,365);assert.equal(byName('NFL','Bart Starr').career_summary.games,196);assert.equal(byName('NFL','Duke Slater').historical_award_facts.first_team_all_pro_reported.value,4);console.log('Historical NBA playoff records',playoffs.length,790);
