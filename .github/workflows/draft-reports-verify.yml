@@ -26,6 +26,7 @@ jobs:
           node --check draft-reports/app.js
           node --check draft-reports/hall-of-fame.js
           node draft-reports/test-hall-of-fame.cjs
+          node draft-reports/test-hall-history.cjs
       - name: Verify class and round depth/greatness aggregates
         run: |
           python3 - <<'PY'
