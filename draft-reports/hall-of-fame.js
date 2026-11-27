@@ -99,7 +99,26 @@ Draft identities checked against published yearly player exports.
   function matchesPosition(p,history,filter){
     return filter==='all'||positionGroups(p.league,positionLabel(p,history)).has(filter);
   }
-  const api={ledger,labels,order,models,thresholds,quality,classify,positionOptions,positionLabel,positionGroups,matchesPosition};
+  function hallScope(row,scope){
+    if(row.p.league!=='NBA'||scope==='directory')return true;
+    if(!row.history||row.history.draft_id)return true;
+    return ['nba_verified','historical_pro_stats','draft_linked'].includes(row.history.pro_career_scope);
+  }
+  function historicalDraftLabel(p,history){
+    if(p.year&&p.overall)return p.year+' · #'+p.overall;
+    const d=history?.historical_draft;
+    if(d?.status==='undrafted')return 'Undrafted';
+    if(d?.status==='drafted'&&d.year&&d.overall)return d.year+' · #'+d.overall;
+    return history?.pro_career_scope==='other_basketball'?'Not NBA draft applicable':'Draft not verified';
+  }
+  function hallScore(p,history){
+    const full=quality(p);
+    if(Number.isFinite(full))return {kind:'full',value:full,label:full.toFixed(1)};
+    if(Number.isFinite(history?.partial_score))return {kind:'partial',value:history.partial_score,label:history.partial_score.toFixed(1)+' est.'};
+    if(history?.pro_career_scope==='other_basketball')return {kind:'not_applicable',value:null,label:'Not NBA-rated'};
+    return {kind:'missing',value:null,label:'Not yet scored'};
+  }
+  const api={ledger,labels,order,models,thresholds,quality,classify,positionOptions,positionLabel,positionGroups,matchesPosition,hallScope,historicalDraftLabel,hallScore};
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.DraftHall=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -47,3 +47,16 @@ assert(!byName('NBA','Bobby Jones').career_summary);
 assert.equal(byName('NBA','George Mikan').career_summary.games,439);
 assert.equal(d.players.filter(p=>p.career_data_source?.kind==='existing_career_comparison').length,23);
 assert(d.players.every(p=>!('starts' in (p.career_summary||{}))));
+
+// Historical leaderboard regression: data coverage is not the same as draft status.
+const rowFor=name=>{const history=byName('NBA',name);return {p:{league:'NBA',name,position:history.position},history};};
+for(const [name,draft,position,score] of [['Andrei Kirilenko','1999 · #24','F','93.6 est.'],['Andres Nocioni','Undrafted','F','69.3 est.'],['Andrew Gaze','Undrafted','G','22.3 est.']]){
+ const r=rowFor(name);assert.equal(h.historicalDraftLabel(r.p,r.history),draft);assert.equal(h.positionLabel(r.p,r.history),position);assert.equal(h.hallScore(r.p,r.history).label,score);assert(h.hallScope(r,'career'));
+}
+for(const name of ['Alline Banks Sprouse','Amaury Pasos','Amaya Valdemore']){
+ const r=rowFor(name);assert(!h.hallScope(r,'career'));assert(h.hallScope(r,'directory'));assert.equal(h.hallScore(r.p,r.history).kind,'not_applicable');
+}
+assert.equal(h.hallScore({quality_score:95},{partial_score:99}).kind,'full');
+assert.equal(h.hallScore({},{}).kind,'missing');
+assert.equal(h.historicalDraftLabel({},{}),'Draft not verified');
+assert.equal(h.historicalDraftLabel({year:2003,overall:1},{}),'2003 · #1');

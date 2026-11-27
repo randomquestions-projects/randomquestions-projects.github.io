@@ -112,3 +112,6 @@
 
 /* Hall of Fame uses the existing draft/college visual system. */
 #hall-kpis{margin:1rem 0 1.5rem} .hall-table{min-width:780px}.hall-player{font:inherit;font-weight:700;background:none;border:0;color:inherit;text-align:left;cursor:pointer;padding:0}.hall-player:hover,.hall-player:focus-visible{text-decoration:underline}.hall-tier{display:inline-block;padding:.3rem .55rem;border-radius:5px;font-size:.76rem;font-weight:650;white-space:nowrap;background:#edf0f2;color:#39434d}.hall-inducted{background:#f5e8bc;color:#69500f}.hall-high{background:#d8ece4;color:#1c5d49}.hall-medium{background:#e0e9f8;color:#2a4d7d}.hall-low{background:#f1ece3;color:#675334}.hall-early{background:#efe7f7;color:#68438a}.draft-view-toggle{flex-wrap:wrap}
+
+/* Keep player names and their data legible on narrow screens. */
+.hall-table th:first-child,.hall-table td:first-child{min-width:180px;max-width:245px;white-space:normal}.hall-table td:nth-child(2),.hall-table td:nth-child(3),.hall-table td:nth-child(4){white-space:nowrap}.hall-table td:nth-child(4){font-weight:700}.hall-table .player-detail{line-height:1.45}.hall-table .player-detail[href]{display:block}@media(max-width:690px){.hall-table th,.hall-table td{padding:10px 12px}.hall-table th:first-child,.hall-table td:first-child{padding-left:12px;min-width:160px}.hall-table{min-width:800px}}
