@@ -42,7 +42,7 @@ Draft identities checked against published yearly player exports.
   const labels={inducted:'Hall of Famer',high:'High likelihood',medium:'Medium likelihood',low:'Low likelihood',early:'On pace · too early to tell'};
   const order=['inducted','high','medium','low','early'];
   const models={NFL:'nfl-draft-v4',NBA:'nba-draft-v3'};
-  const thresholds=/* CALIBRATION */{NFL:{high:90,medium:85,low:80},NBA:{high:90,medium:85,low:80}};
+  const thresholds={"NFL":{"high":91,"medium":90,"low":89},"NBA":{"high":89,"medium":87,"low":86}};
   const quality=p=>Number.isFinite(p.quality_score)?p.quality_score:Number.isFinite(p.rating?.quality)?p.rating.quality:null;
   const norm=s=>String(s||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
   function classify(p, model){
