@@ -973,10 +973,15 @@
       if(ballotYears.length)first.appendChild(safeText('div','player-detail','Ballot / finalist: '+ballotYears.join(', ')));
       if(history?.induction_verification==='review')first.appendChild(safeText('div','player-detail','Induction identity under review'));
       if(eligibility)first.appendChild(safeText('div','player-detail','Estimated eligibility: '+eligibility.estimated_first_eligible_class+' · last observed '+eligibility.last_observed_season));
-      if(history?.career_summary||history?.award_counts_through_2024){
+      if(history?.score_review)first.appendChild(safeText('div','player-detail',history.score_review));
+      if(history?.career_summary||history?.award_counts_through_2024||history?.career_data_source){
         const details=document.createElement('details');details.appendChild(safeText('summary','player-detail','Historical stats & awards'));
-        for(const [k,v] of Object.entries(history.career_summary||{}))details.appendChild(safeText('div','player-detail',k.replaceAll('_',' ')+': '+Number(v).toLocaleString()));
+        for(const [k,v] of Object.entries(history.career_summary||{}).filter(([k,v])=>k!=='legacy_starts_field'&&Number.isFinite(v)))details.appendChild(safeText('div','player-detail',k.replaceAll('_',' ')+': '+Number(v).toLocaleString()));
         for(const [k,v] of Object.entries(history.award_counts_through_2024||{}))details.appendChild(safeText('div','player-detail',k.replaceAll('_',' ')+': '+v+' (through 2024)'));
+        if(history.career_data_source){
+          details.appendChild(safeText('div','player-detail',history.career_data_source.scope));
+          const link=safeText('a','player-detail','Statistics source ↗');link.href=history.career_data_source.source;link.target='_blank';link.rel='noopener noreferrer';details.appendChild(link);
+        }else if(history.career_data_status==='legacy_statistics_unreviewed')details.appendChild(safeText('div','player-detail','Legacy statistics not independently reconciled; ambiguous starts field omitted.'));
         first.appendChild(details);
       }
       tr.appendChild(first);

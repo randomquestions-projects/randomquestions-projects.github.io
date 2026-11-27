@@ -28,6 +28,22 @@ for(const entry of d.players){
 }
 console.log('Verified modern draft linkages:',mapped.size);
 
-const estimates=d.players.filter(p=>p.score_kind==='historical_partial_estimate');assert.equal(estimates.length,169);for(const p of estimates){assert(Number.isFinite(p.partial_score)&&p.partial_score>=0&&p.partial_score<=100);assert(p.coverage>=60&&p.coverage<=100);assert(!p.draft_id);}
+const estimates=d.players.filter(p=>p.score_kind==='historical_partial_estimate');assert.equal(estimates.length,167);for(const p of estimates){assert(Number.isFinite(p.partial_score)&&p.partial_score>=0&&p.partial_score<=100);assert(p.coverage>=60&&p.coverage<=100);assert(!p.draft_id);}
 assert.equal(new Set(d.upcoming.map(p=>p.draft_id)).size,d.upcoming.length);for(const e of d.upcoming){const m=picks.get(e.draft_id);assert(m&&m.p.name===e.name);assert(e.estimated_first_eligible_class>=2027&&e.estimated_first_eligible_class<=2031);assert.equal(e.estimated_first_eligible_class,e.last_observed_season+(m.p.league==='NFL'?6:3));assert.equal(e.status,'estimated_not_confirmed');}
 assert.equal(d.players.filter(p=>p.league==='NBA'&&p.induction_verification==='official_name_year').length,247);console.log('Historical estimates',estimates.length,'Upcoming',d.upcoming.length);
+
+// Regression checks for cross-era name collisions, official record corrections, and scope.
+const byName=(league,name)=>d.players.find(p=>p.league===league&&p.name===name);
+assert.equal(byName('NFL','Reggie White').career_summary.games,232);
+assert.equal(byName('NFL','Reggie White').career_summary.sacks,198);
+assert.equal(byName('NFL','Johnny Robinson').career_summary.games,164);
+assert.equal(byName('NFL','Johnny Robinson').partial_score,undefined);
+assert.equal(byName('NFL','Reggie White').partial_score,undefined);
+assert.equal(byName('NFL','Kellen Winslow').career_summary.receptions,541);
+assert.equal(byName('NFL','Adrian Peterson').position,'RB');
+assert.equal(byName('NBA',"John 'Cat' Thompson").career_data_status,'non_nba_historical_player');
+assert(!byName('NBA',"John 'Cat' Thompson").career_summary);
+assert(!byName('NBA','Bobby Jones').career_summary);
+assert.equal(byName('NBA','George Mikan').career_summary.games,439);
+assert.equal(d.players.filter(p=>p.career_data_source?.kind==='existing_career_comparison').length,23);
+assert(d.players.every(p=>!('starts' in (p.career_summary||{}))));
