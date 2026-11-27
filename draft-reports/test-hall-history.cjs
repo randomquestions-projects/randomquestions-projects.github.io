@@ -156,7 +156,15 @@ assert.equal(byName('NFL','Kurt Warner').career_summary.passing_yards,32344);
 console.log('Historical career profile facts:',factRows.length,'players; conflict and sack-scope protections checked');
 
 const titles=d.players.filter(p=>p.historical_award_facts?.nba_championships);
-assert.equal(titles.length,69);
+assert.equal(titles.length,85);
 assert.equal(byName('NBA','Alonzo Mourning').historical_award_facts.nba_championships.value,1);
 for(const p of titles){const f=p.historical_award_facts.nba_championships;assert.equal(p.league,'NBA');assert.equal(f.value,new Set(f.years).size);assert(h.historicalProfile({league:'NBA',name:p.name},p).awards.some(a=>a.label==='NBA championships'&&a.value===f.value));}
 console.log('Historical NBA playing championships:',titles.length);
+
+assert.deepEqual(byName('NBA','Michael Jordan').historical_award_facts.nba_championships.years,[1991,1992,1993,1996,1997,1998]);
+assert.equal(byName('NFL','Adam Vinatieri').historical_award_facts.super_bowl_titles.value,4);
+assert.equal(byName('NFL','Alan Faneca').historical_award_facts.first_team_all_pro_reported.value,6);
+const newAllPro=d.players.filter(p=>p.historical_award_facts?.first_team_all_pro_reported);
+assert(newAllPro.length>=260);
+for(const p of newAllPro){assert.equal(p.league,'NFL');assert(p.historical_award_facts.first_team_all_pro_reported.scope.includes('selector may differ'));}
+console.log('Reported historical honors release',JSON.stringify(d.historical_honors_release.changes));
