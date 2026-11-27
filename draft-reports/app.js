@@ -13,10 +13,12 @@
   let cohortCatalog = null;
   let cohortUnavailable = false;
   let currentModelVersion = null;
-  let honorScope = 'round';
+  let honorScope = 'class';
   let honorMetric = null;
   const honorDefinitions = {
     NFL: [
+      ['hof_inducted', 'Hall of Famers'],
+      ['hof_contender', 'Hall of Fame contenders'],
       ['pro_bowls', 'Pro Bowls'],
       ['total_all_pro', 'All-Pro seasons'],
       ['first_team_all_pro', 'First-team All-Pro'],
@@ -26,6 +28,8 @@
       ['super_bowl_titles', 'Champion-team rosters']
     ],
     NBA: [
+      ['hof_inducted', 'Hall of Famers'],
+      ['hof_contender', 'Hall of Fame contenders'],
       ['all_star', 'All-Star selections'],
       ['all_nba_total', 'All-NBA teams'],
       ['all_nba_first', 'First-team All-NBA'],
@@ -311,6 +315,10 @@
   }
 
   function awardCount(p, key) {
+    if(key==='hof_inducted'||key==='hof_contender'){
+      const status=DraftHall.classify(p,currentModelVersion);
+      return status && (key==='hof_inducted'?status.tier==='inducted':status.tier!=='inducted')?1:0;
+    }
     const value = p.career?.awards?.[key];
     return Number.isFinite(value) && value > 0 ? value : 0;
   }
@@ -395,22 +403,22 @@
     const scopedPicks = honorScope === 'class' ? allPicks : roundPicks;
     const categories = honorDefinitions[state.league];
     if (!categories.some(([key]) => key === honorMetric)) {
-      honorMetric = state.league === 'NFL' ? 'pro_bowls' : 'all_star';
+      honorMetric = 'hof_inducted';
     }
     const metrics = $('honors-metrics');
     metrics.replaceChildren();
     for (const [key, label] of categories) {
+      const hof = key.startsWith('hof_');
       const selections = scopedPicks.reduce((s, p) => s + awardCount(p, key), 0);
       const players = scopedPicks.filter(p => awardCount(p, key) > 0).length;
       const btn = safeText('button', 'honor-metric', '');
       btn.type = 'button';
       btn.setAttribute('aria-pressed', String(honorMetric === key));
-      btn.setAttribute('aria-label', label + ': ' + selections + ' selections, ' +
-        players + ' players. Show the recipients.');
+      btn.setAttribute('aria-label', label + ': ' + (hof ? players+' players' : selections+' selections, '+players+' players') + '. Show the roster.');
       btn.appendChild(safeText('span', 'honor-metric-count', String(selections)));
       btn.appendChild(safeText('span', 'honor-metric-label', label));
       btn.appendChild(safeText('span', 'honor-metric-extra',
-        players + (players === 1 ? ' player' : ' players')));
+        hof ? (key==='hof_inducted'?'Verified inductees':'Includes early watchlist') : players + (players === 1 ? ' player' : ' players')));
       btn.addEventListener('click', () => {
         honorMetric = key;
         renderCohortPanel();
@@ -430,7 +438,7 @@
     if (!people.length) {
       roster.appendChild(safeText('p', 'honors-roster-empty', !scopedPicks.length ?
         'Draft players are loading or unavailable.' :
-        'No verified recipients from this selection yet. Choose another honor or the entire class.'));
+        honorMetric.startsWith('hof_') ? 'No players in this Hall of Fame category for the selected scope.' : 'No verified recipients from this selection yet. Choose another honor or the entire class.'));
     } else {
       const grid = safeText('div', 'honors-roster-grid', '');
       for (const p of people) {
@@ -440,7 +448,7 @@
         btn.appendChild(safeText('span', 'honors-person-name', p.name + ' · #' + p.overall));
         const n = awardCount(p, honorMetric);
         btn.appendChild(safeText('span', 'honors-person-detail',
-          String(n) + (n === 1 ? ' selection' : ' selections') + ' ↗'));
+          honorMetric.startsWith('hof_') ? (DraftHall.labels[DraftHall.classify(p,currentModelVersion)?.tier] || '—')+' ↗' : String(n) + (n === 1 ? ' selection' : ' selections') + ' ↗'));
         btn.addEventListener('click', () => showProfile(p));
         grid.appendChild(btn);
       }
@@ -516,7 +524,7 @@
     state.query = '';
     state.sort = 'pick';
     honorMetric = null;
-    honorScope = 'round';
+    honorScope = 'class';
     $('player-search').value = '';
     $('sort-filter').value = 'pick';
     populateYears();
@@ -529,7 +537,7 @@
     const league = (params.get('league') || 'nfl').toUpperCase();
     const year = Number(params.get('year'));
     const round = Number(params.get('round'));
-    collegeView = params.get('view') === 'college' ? 'college' : 'draft';
+    collegeView = ['college','hall'].includes(params.get('view')) ? params.get('view') : 'draft';
     if (league === 'NFL' || league === 'NBA') state.league = league;
     if (Number.isInteger(year) && year >= 1960 && year <= 2026) state.year = year;
     if (Number.isInteger(round) && round >= 1 && round <= (state.league === 'NFL' ? 7 : 2)) state.round = round;
@@ -710,10 +718,14 @@
     if (!$('college-view')) return;
     $('draft-view').hidden=collegeView!=='draft';
     $('college-view').hidden=collegeView!=='college';
+    $('hall-view').hidden=collegeView!=='hall';
+    $('view-hall').classList.toggle('is-active',collegeView==='hall');
+    $('view-hall').setAttribute('aria-pressed',String(collegeView==='hall'));
     $('view-draft').classList.toggle('is-active',collegeView==='draft');
     $('view-college').classList.toggle('is-active',collegeView==='college');
     $('view-draft').setAttribute('aria-pressed',String(collegeView==='draft'));
     $('view-college').setAttribute('aria-pressed',String(collegeView==='college'));
+    if(collegeView==='hall'){renderHall();return;}
     if(collegeView!=='college')return;
     if (!collegeCatalog?.leagues?.[state.league]) {
       $('college-status').textContent='College rankings are loading or unavailable. The draft board remains accessible.';
@@ -820,6 +832,9 @@
     updateCollegePosition();
     $('view-draft').addEventListener('click',()=>{collegeView='draft';renderCollege();syncCollegeUrl();});
     $('view-college').addEventListener('click',()=>{collegeView='college';renderCollege();syncCollegeUrl();});
+    $('view-hall').addEventListener('click',()=>{collegeView='hall';renderCollege();syncCollegeUrl();});
+    for(const id of ['hall-tier','hall-era','hall-sort','hall-search'])$(id).addEventListener(id==='hall-search'?'input':'change',renderHall);
+    for(let y=2026;y>=2000;y--){const opt=safeText('option','',String(y));opt.value=String(y);$('hall-era').appendChild(opt);}
     $('college-era').addEventListener('change',e=>{collegeEra=e.target.value;selectedCollege=null;renderCollege();});
     $('college-position').addEventListener('change',e=>{collegePosition=e.target.value;selectedCollege=null;renderCollege();});
     $('college-search').addEventListener('input',e=>{collegeSearch=e.target.value;selectedCollege=null;renderCollege();});
@@ -827,9 +842,83 @@
   }
   function syncCollegeUrl(){
     const url=new URL(window.location.href);
-    if(collegeView==='college')url.searchParams.set('view','college');
+    if(collegeView==='college'||collegeView==='hall')url.searchParams.set('view',collegeView);
     else url.searchParams.delete('view');
     window.history.replaceState(null,'',url.pathname+url.search+url.hash);
+  }
+  const hallCache=new Map();
+  const hallLoading=new Map();
+  const hallErrors=new Map();
+  function loadHall(league){
+    if(hallLoading.has(league)||hallCache.has(league))return;
+    hallErrors.delete(league);
+    const job=(async()=>{
+      const docs=[];
+      for(let y=2000;y<=2026;y+=5){
+        const batch=await Promise.all(Array.from({length:Math.min(5,2027-y)},(_,i)=>y+i).map(async year=>{
+          const response=await fetch('./data/'+league.toLowerCase()+'/'+year+'.json',{cache:'no-cache'});
+          if(!response.ok)throw Error('Missing '+year);
+          const d=await response.json();
+          if(d.league!==league||d.year!==year||d.schema_version!==2||d.model_version!==DraftHall.models[league]||!Array.isArray(d.picks)||d.picks.length<(league==='NFL'?200:56)||d.picks.some((p,i)=>p.year!==year||p.league!==league||p.overall!==i+1))throw Error('Invalid or mixed-version draft '+year);
+          return d;
+        }));
+        docs.push(...batch);
+      }
+      const rows=docs.flatMap(d=>d.picks.map(p=>({p,h:DraftHall.classify(p,d.model_version)}))).filter(x=>x.h);
+      if(rows.filter(x=>x.h.tier==='inducted').length!==Object.keys(DraftHall.ledger[league]).length)throw Error('Hall of Fame identity reconciliation failed');
+      hallCache.set(league,rows);
+    })();
+    hallLoading.set(league,job);
+    job.catch(e=>{console.warn('Hall leaderboard unavailable',e);hallErrors.set(league,e.message);})
+      .finally(()=>{hallLoading.delete(league);if(state.league===league&&collegeView==='hall')renderHall();});
+  }
+  function renderHall(){
+    if(collegeView!=='hall')return;
+    const league=state.league, data=hallCache.get(league);
+    if(!data){
+      $('hall-kpis').replaceChildren();$('hall-rows').replaceChildren();$('hall-count').textContent='—';
+      const status=$('hall-status');status.replaceChildren();
+      if(hallErrors.has(league)){
+        status.appendChild(document.createTextNode('Complete leaderboard unavailable: '+hallErrors.get(league)+' '));
+        const retry=safeText('button','view-toggle','Retry');retry.type='button';
+        retry.addEventListener('click',()=>{hallErrors.delete(league);renderHall();});status.appendChild(retry);
+      }else{
+        status.textContent='Loading all 27 verified '+league+' draft classes…';loadHall(league);
+      }
+      return;
+    }
+    const year=$('hall-era').value, tier=$('hall-tier').value, q=$('hall-search').value.trim().toLowerCase(), sort=$('hall-sort').value;
+    const scoped=data.filter(({p})=>year==='all'||String(p.year)===year);
+    const kpis=$('hall-kpis');kpis.replaceChildren();
+    for(const t of DraftHall.order){
+      const count=scoped.filter(x=>x.h.tier===t).length;
+      const b=safeText('button','honor-metric','');b.type='button';b.setAttribute('aria-pressed',String(tier===t));
+      b.appendChild(safeText('span','honor-metric-count',String(count)));
+      b.appendChild(safeText('span','honor-metric-label',DraftHall.labels[t]));
+      b.appendChild(safeText('span','honor-metric-extra',t==='inducted'?'Official':t==='early'?'Strong start':'Model tier'));
+      b.addEventListener('click',()=>{$('hall-tier').value=tier===t?'all':t;renderHall();});kpis.appendChild(b);
+    }
+    const rows=scoped.filter(({p,h})=>(tier==='all'||h.tier===tier)&&(!q||[p.name,p.team,p.position||'',p.college||''].some(x=>x.toLowerCase().includes(q))));
+    const qv=p=>DraftHall.quality(p)??-1, pv=p=>p.pace?.score??-1;
+    rows.sort((a,b)=>{
+      const x=a.p,y=b.p;
+      if(sort==='name')return x.name.localeCompare(y.name);
+      if(sort==='year')return y.year-x.year||x.overall-y.overall;
+      if(sort==='quality')return qv(y)-qv(x)||pv(y)-pv(x)||x.name.localeCompare(y.name);
+      if(sort==='pace')return pv(y)-pv(x)||qv(y)-qv(x)||x.name.localeCompare(y.name);
+      return DraftHall.order.indexOf(a.h.tier)-DraftHall.order.indexOf(b.h.tier)||(a.h.tier==='early'?pv(y)-pv(x):qv(y)-qv(x))||x.name.localeCompare(y.name);
+    });
+    $('hall-status').textContent=league+' · '+data.length+' classified players across 27 draft classes · '+DraftHall.models[league];
+    $('hall-count').textContent=rows.length+' players';
+    const target=$('hall-rows');target.replaceChildren();
+    for(const {p,h} of rows){
+      const tr=document.createElement('tr');
+      const first=document.createElement('td'), b=safeText('button','hall-player',p.name+' ↗');b.type='button';b.addEventListener('click',()=>showProfile(p));first.appendChild(b);tr.appendChild(first);
+      for(const v of [p.year+' · #'+p.overall,p.position||'—',qv(p)<0?'—':qv(p).toFixed(1),pv(p)<0?'—':pv(p).toFixed(1)])tr.appendChild(safeText('td','',v));
+      const status=document.createElement('td');status.appendChild(safeText('span','hall-tier hall-'+h.tier,DraftHall.labels[h.tier]));tr.appendChild(status);
+      tr.appendChild(safeText('td','',h.year?String(h.year):'—'));target.appendChild(tr);
+    }
+    if(!rows.length){const tr=document.createElement('tr'),td=safeText('td','','No matching players. Change the filters.');td.colSpan=7;tr.appendChild(td);target.appendChild(tr);}
   }
   async function main() {
     $('copyright-year').textContent = String(new Date().getFullYear());
