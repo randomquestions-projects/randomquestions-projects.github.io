@@ -9,9 +9,9 @@
   <title>Draft Reports — Random Questions</title>
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css?v=hof1">
-  <script src="./hall-of-fame.js?v=vnext2" defer></script>
+  <script src="./hall-of-fame.js?v=hof-position1" defer></script>
   <script src="./career-comparison.js?v=compare1" defer></script>
-  <script src="./app.js?v=compare1" defer></script>
+  <script src="./app.js?v=hof-position1" defer></script>
 </head>
 <body>
 <a class="skip" href="#board">Skip to draft board</a>
@@ -115,6 +115,7 @@
           <div id="hall-kpis" class="honors-metrics" aria-live="polite"></div>
           <div class="college-filters">
             <div class="filter-block"><label for="hall-tier">HALL OF FAME STATUS</label><div class="select-shell"><select id="hall-tier"><option value="all">All tiers</option><option value="inducted">Hall of Famers</option><option value="high">High likelihood</option><option value="medium">Medium likelihood</option><option value="low">Low likelihood</option><option value="early">On pace · too early to tell</option><option value="ballot">Ballot history · not model-ranked</option><option value="upcoming">Estimated eligibility · 2027–2031</option></select></div></div>
+            <div class="filter-block"><label for="hall-position">POSITION</label><div class="select-shell"><select id="hall-position"><option value="all">All positions</option></select></div></div>
             <div class="filter-block"><label for="hall-era">DRAFT YEAR</label><div class="select-shell"><select id="hall-era"><option value="all">All years</option></select></div></div>
             <div class="filter-block filter-search"><label for="hall-search">FIND A PLAYER</label><div class="search-shell"><input type="search" id="hall-search" placeholder="Name, position, team..." autocomplete="off"></div></div>
             <div class="filter-block"><label for="hall-sort">SORT BY</label><div class="select-shell"><select id="hall-sort"><option value="tier">Hall status, then score</option><option value="quality">Career quality</option><option value="partial">Historical partial estimate</option><option value="eligibility">Estimated eligibility year</option><option value="pace">Career pace</option><option value="year">Draft year</option><option value="name">Player name</option></select></div></div>

@@ -28,3 +28,23 @@ for(const league of ['NFL','NBA']){
  assert.equal(n,league==='NFL'?19:8);
  console.log(league,tiers);
 }
+
+// Hall filters handle modern codes, historical labels, dual positions and missing positions.
+const group=(league,position)=>h.positionGroups(league,position);
+assert(group('NFL','WR').has('WR'));
+assert(group('NFL','Wide receiver/return specialist').has('WR'));
+assert(group('NFL','Wide receiver/return specialist').has('RET'));
+assert(group('NFL','Cornerback/safety').has('CB'));
+assert(group('NFL','Cornerback/safety').has('S'));
+assert(group('NFL','Cornerback/safety').has('DB'));
+assert(group('NFL','Defensive middle guard').has('DT'));
+assert(!group('NFL','Defensive middle guard').has('OL'));
+assert(group('NFL','Center/guard').has('OL'));
+assert(group('NBA','F-C').has('F')&&group('NBA','F-C').has('C'));
+assert(group('NBA','PG').has('G'));
+assert(group('NBA','nan').has('other'));
+assert(h.matchesPosition({league:'NFL',position:'WR'},null,'all'));
+assert(!h.matchesPosition({league:'NFL',position:'WR'},null,'QB'));
+assert(h.matchesPosition({league:'NBA',position:''},{position:'G-F'},'F'));
+assert(h.matchesPosition({league:'NBA',id:'nba-2003-5',name:'Dwyane Wade',position:''},null,'G'));
+assert(h.matchesPosition({league:'NBA',id:'nba-2003-5',name:'Wrong identity',position:''},null,'other'));

@@ -838,7 +838,7 @@
     $('view-college').addEventListener('click',()=>{collegeView='college';renderCollege();syncCollegeUrl();});
     $('view-hall').addEventListener('click',()=>{collegeView='hall';renderCollege();syncCollegeUrl();});
     $('view-comparison').addEventListener('click',()=>{collegeView='comparison';renderCollege();syncCollegeUrl();});
-    for(const id of ['hall-tier','hall-era','hall-sort','hall-search'])$(id).addEventListener(id==='hall-search'?'input':'change',renderHall);
+    for(const id of ['hall-tier','hall-era','hall-position','hall-sort','hall-search'])$(id).addEventListener(id==='hall-search'?'input':'change',renderHall);
     for(let y=2026;y>=2000;y--){const opt=safeText('option','',String(y));opt.value=String(y);$('hall-era').appendChild(opt);}
     $('college-era').addEventListener('change',e=>{collegeEra=e.target.value;selectedCollege=null;renderCollege();});
     $('college-position').addEventListener('change',e=>{collegePosition=e.target.value;selectedCollege=null;renderCollege();});
@@ -926,8 +926,17 @@
       }
       return;
     }
-    const year=$('hall-era').value, tier=$('hall-tier').value, q=$('hall-search').value.trim().toLowerCase(), sort=$('hall-sort').value;
-    const scoped=data.filter(({p})=>year==='all'||String(p.year)===year);
+    const positionSelect=$('hall-position');
+    if(positionSelect.dataset.league!==league){
+      positionSelect.replaceChildren();
+      for(const [value,label] of [['all','All positions'],...DraftHall.positionOptions[league]]){
+        const option=safeText('option','',label);option.value=value;positionSelect.appendChild(option);
+      }
+      positionSelect.dataset.league=league;
+      positionSelect.value='all';
+    }
+    const year=$('hall-era').value, tier=$('hall-tier').value, position=positionSelect.value, q=$('hall-search').value.trim().toLowerCase(), sort=$('hall-sort').value;
+    const scoped=data.filter(({p,history})=>(year==='all'||String(p.year)===year)&&DraftHall.matchesPosition(p,history,position));
     const kpis=$('hall-kpis');kpis.replaceChildren();
     for(const t of [...DraftHall.order,'ballot','upcoming']){
       const count=scoped.filter(x=>t==='upcoming'?x.eligibility:x.h.tier===t).length;
@@ -937,7 +946,7 @@
       b.appendChild(safeText('span','honor-metric-extra',t==='inducted'?'Directory records':t==='early'?'Strong start':t==='ballot'?'Not model-ranked':t==='upcoming'?'2027–2031 · estimated':'Model tier'));
       b.addEventListener('click',()=>{$('hall-tier').value=tier===t?'all':t;renderHall();});kpis.appendChild(b);
     }
-    const rows=scoped.filter(({p,h,eligibility})=>(tier==='all'||(tier==='upcoming'?!!eligibility:h.tier===tier))&&(!q||[p.name,p.team,p.position||'',p.college||''].some(x=>x.toLowerCase().includes(q))));
+    const rows=scoped.filter(({p,h,eligibility,history})=>(tier==='all'||(tier==='upcoming'?!!eligibility:h.tier===tier))&&(!q||[p.name,p.team||'',DraftHall.positionLabel(p,history),p.college||''].some(x=>x.toLowerCase().includes(q))));
     const qv=p=>DraftHall.quality(p)??-1, pv=p=>p.pace?.score??-1;
     rows.sort((a,b)=>{
       const x=a.p,y=b.p;
@@ -971,7 +980,7 @@
         first.appendChild(details);
       }
       tr.appendChild(first);
-      for(const v of [p.year?p.year+' · #'+p.overall:'Outside draft dataset',p.position||'—',qv(p)<0?'Insufficient data':qv(p).toFixed(1),Number.isFinite(history?.partial_score)?history.partial_score.toFixed(1)+' · '+history.coverage+'%':'—',pv(p)<0?'—':pv(p).toFixed(1)])tr.appendChild(safeText('td','',v));
+      for(const v of [p.year?p.year+' · #'+p.overall:'Outside draft dataset',DraftHall.positionLabel(p,history)||'—',qv(p)<0?'Insufficient data':qv(p).toFixed(1),Number.isFinite(history?.partial_score)?history.partial_score.toFixed(1)+' · '+history.coverage+'%':'—',pv(p)<0?'—':pv(p).toFixed(1)])tr.appendChild(safeText('td','',v));
       const status=document.createElement('td');status.appendChild(safeText('span','hall-tier hall-'+h.tier,DraftHall.labels[h.tier]||(h.tier==='upcoming'?'Estimated eligibility':'Ballot history')));tr.appendChild(status);
       tr.appendChild(safeText('td','',h.year?String(h.year):'—'));target.appendChild(tr);
     }
