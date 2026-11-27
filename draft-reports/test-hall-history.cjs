@@ -111,3 +111,14 @@ assert.equal(byName('NFL','Don Hutson').career_summary.games,116);
 assert.equal(byName('NFL','Deacon Jones').career_summary.games,191);
 assert.equal(byName('NFL','Jim Thorpe').career_summary.games,52);
 console.log('NFL historical media-guide career baselines:',guideRows.length);
+
+const officialAwardRows=d.players.filter(p=>p.historical_award_facts?.pro_bowl_selections);
+assert(officialAwardRows.length>=150);
+for(const p of officialAwardRows){const a=p.historical_award_facts.pro_bowl_selections;assert(Number.isInteger(a.value)&&a.value>0);assert(a.source.includes('profootballhof.com'));}
+assert.equal(byName('NFL','Don Hutson').career_summary.receiving_yards,7991);
+assert.equal(byName('NFL','Warren Moon').career_summary.passing_yards,49325);
+assert.equal(byName('NFL','Art Donovan').career_summary.seasons_played,12);
+assert.equal(byName('NFL','Bill George').career_summary.seasons_played,15);
+assert(!h.hallScope({p:{league:'NFL'},history:byName('NFL','George Halas')}));
+const hutson=byName('NFL','Don Hutson');assert.equal(h.historicalProfile({league:'NFL',name:hutson.name},hutson).awards.find(a=>a.label==='Pro Bowl selections').value,4);
+console.log('Official historical Pro Bowl counts:',officialAwardRows.length,'; official production facts and role corrections checked');

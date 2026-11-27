@@ -171,6 +171,11 @@ Draft identities checked against published yearly player exports.
     const labels=k=>statLabels[k]||k.replaceAll('_',' ').replace(/^./,x=>x.toUpperCase());
     const stats=[],awards=[],seen=new Set();
     const c=history?.career_summary||{};
+    for(const [key,fact] of Object.entries(history?.historical_award_facts||{})){
+      if(key==='pro_bowl_selections'&&Number.isFinite(fact?.value)){
+        awards.push({label:'Pro Bowl selections',value:fact.value,scope:fact.scope});seen.add('pro_bowls');
+      }
+    }
     for(const [key,v] of Object.entries(history?.award_counts_through_2024||{})){
       if(Number.isFinite(v)){awards.push({label:labels(key),value:v,scope:'through 2024'});seen.add(key);}
     }
