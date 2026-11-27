@@ -146,3 +146,11 @@ h.attachHistoricalEstimates(depthRows,allPicks);
 for(const row of depthRows){const e=row.history.observed_estimate;if(e){assert(e.coverage>=50&&e.coverage<=65);assert(e.value>=0&&e.value<=100);assert(e.parts.every(p=>p.peers>=30));}}
 for(const lg of ['NFL','NBA']){const rows=depthRows.filter(r=>r.p.league===lg);const c=rows.reduce((a,r)=>{const k=h.hallScore(r.p,r.history).kind;a[k]=(a[k]||0)+1;return a;},{});console.log('HISTORICAL_SCORE_COVERAGE '+JSON.stringify({league:lg,total:rows.length,...c}));}
 console.log('Depth release: NBA award rows',mergedNBA.length,'NFL career rows',mergedNFL.length);
+
+const factRows=d.players.filter(p=>p.additional_stat_sources?.some(x=>x.license==='CC BY-SA 4.0'));
+assert.equal(factRows.length,239);
+for(const p of factRows){assert.equal(p.league,'NFL');assert(p.induction_year&&!p.draft_id);for(const s of p.additional_stat_sources.filter(x=>x.license==='CC BY-SA 4.0')){assert(s.source.startsWith('https://en.wikipedia.org/wiki/'));assert(s.fields.every(k=>Number.isFinite(p.career_summary[k])));assert(!s.fields.includes('sacks'));}}
+assert.equal(byName('NFL','Ace Parker').career_summary.rushing_yards,1292);
+assert.equal(byName('NFL','Aeneas Williams').career_summary.total_tackles,793);
+assert.equal(byName('NFL','Kurt Warner').career_summary.passing_yards,32344);
+console.log('Historical career profile facts:',factRows.length,'players; conflict and sack-scope protections checked');
