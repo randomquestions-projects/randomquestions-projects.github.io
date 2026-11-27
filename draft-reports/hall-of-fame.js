@@ -113,12 +113,14 @@ Draft identities checked against published yearly player exports.
   }
   // Supplemental career-component estimate, not the full vNext model. Use the
   // same mature reference cohort and component weights; missing is never zero.
-  const historicalWeights={NBA:{win_shares:25,vorp:15,minutes:10},NFL:{weighted_av:40,games:10}};
+  const historicalWeights={NBA:{win_shares:25,vorp:15,minutes:10},NFL:{weighted_av:40,seasons_started:15,games:10}};
   function historicalGroup(p,history){
     if(p.league==='NBA')return 'ALL';
     if(p.position_group)return p.position_group;
     const g=positionGroups('NFL',positionLabel(p,history));
     const groups=['QB','RB','WR','TE','OL','DL','LB','DB'].filter(x=>g.has(x));
+    if(!groups.includes('DL')&&(g.has('DE')||g.has('DT')))groups.push('DL');
+    if(!groups.includes('DB')&&(g.has('CB')||g.has('S')))groups.push('DB');
     if(g.has('K')||g.has('P')||g.has('RET'))groups.push('ST');
     return groups.length===1?groups[0]:null;
   }
@@ -159,9 +161,9 @@ Draft identities checked against published yearly player exports.
   function attachHistoricalEstimates(rows,picks){
     const ref=historicalReference(picks);
     for(const row of rows){
-      if(!row.historicalOnly||Number.isFinite(row.history?.partial_score))continue;
+      if(!row.historicalOnly)continue;
       const estimate=observedHistoricalEstimate(row.p,row.history,ref);
-      if(estimate)row.history.observed_estimate=estimate;
+      if(estimate&&(!Number.isFinite(row.history?.partial_score)||estimate.coverage>(row.history.coverage??0)))row.history.observed_estimate=estimate;
     }
     return rows;
   }
@@ -172,7 +174,7 @@ Draft identities checked against published yearly player exports.
     const stats=[],awards=[],seen=new Set();
     const c=history?.career_summary||{};
     for(const [key,fact] of Object.entries(history?.historical_award_facts||{})){
-      const label=key==='pro_bowl_selections'?'Pro Bowl selections':statLabels[key];
+      const label=key==='pro_bowl_selections'?'Pro Bowl selections':awardKeys.has(key)?labels(key):null;
       if(label&&Number.isFinite(fact?.value)){
         awards.push({label,value:fact.value,scope:[fact.scope,Array.isArray(fact.years)?fact.years.join(', '):null].filter(Boolean).join(' · ')});seen.add(key==='pro_bowl_selections'?'pro_bowls':key);
       }
@@ -181,7 +183,7 @@ Draft identities checked against published yearly player exports.
       if(Number.isFinite(v)&&!seen.has(key)){awards.push({label:labels(key),value:v,scope:'through 2024'});seen.add(key);}
     }
     for(const [key,v] of Object.entries(c)){
-      if(!Number.isFinite(v)||key==='legacy_starts_field'||key==='starts')continue;
+      if(!Number.isFinite(v)||key==='legacy_starts_field'||key==='starts'||(key==='wav'&&Number.isFinite(c.weighted_av)))continue;
       if(awardKeys.has(key)){if(!seen.has(key))awards.push({label:labels(key),value:v});}
       else stats.push({label:labels(key),value:v});
     }
@@ -195,8 +197,8 @@ Draft identities checked against published yearly player exports.
   function hallScore(p,history){
     const full=quality(p);
     if(Number.isFinite(full))return {kind:'full',value:full,label:full.toFixed(1)};
-    if(Number.isFinite(history?.partial_score))return {kind:'partial',value:history.partial_score,label:history.partial_score.toFixed(1)+' est.'};
     if(Number.isFinite(history?.observed_estimate?.value))return {kind:'observed',value:history.observed_estimate.value,label:history.observed_estimate.value.toFixed(1)+' est.'};
+    if(Number.isFinite(history?.partial_score))return {kind:'partial',value:history.partial_score,label:history.partial_score.toFixed(1)+' est.'};
     if(history?.pro_career_scope==='other_basketball')return {kind:'not_applicable',value:null,label:'Not NBA-rated'};
     return {kind:'missing',value:null,label:'Not yet scored'};
   }

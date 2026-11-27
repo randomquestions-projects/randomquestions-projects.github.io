@@ -132,3 +132,17 @@ assert.equal(jordanProfile.awards.filter(a=>a.label==='Most Valuable Player').le
 assert.deepEqual(byName('NFL','Lawrence Taylor').historical_award_facts.dpoy.years,[1981,1982,1986]);
 for(const p of d.players)for(const a of Object.values(p.historical_award_facts||{}))if(a.years){assert.equal(a.value,new Set(a.years).size);assert(a.years.every(y=>y<=p.induction_year));}
 console.log('Historical major-award event reconciliation passed');
+
+const mergedNBA=d.players.filter(p=>p.league==='NBA'&&Object.values(p.historical_award_facts||{}).some(a=>a.source.includes('2026-27-NBA-Guide')||a.source.includes('List_of_NBA_All-Stars')));
+const mergedNFL=d.players.filter(p=>p.additional_stat_sources?.some(a=>a.license==='CC BY 4.0'));
+assert.equal(mergedNBA.length,136);assert.equal(mergedNFL.length,83);
+assert.equal(byName('NBA','Alex English').historical_award_facts.all_star.value,8);
+assert.equal(byName('NBA','Michael Jordan').historical_award_facts.all_star.value,14);
+assert.equal(byName('NBA','Michael Jordan').historical_award_facts.all_nba_first.value,10);
+assert.equal(byName('NBA','Bobby Jones').historical_award_facts.all_defense_first.value,8);
+for(const p of mergedNFL)assert(p.career_summary.games>0);
+const allPicks=[...picks.values()].map(x=>x.p);const depthRows=d.players.filter(p=>p.induction_year&&h.hallScope({p:{league:p.league},history:p})&&!p.draft_id).map(history=>({p:{league:history.league,name:history.name,position:history.position},history:structuredClone(history),historicalOnly:true}));
+h.attachHistoricalEstimates(depthRows,allPicks);
+for(const row of depthRows){const e=row.history.observed_estimate;if(e){assert(e.coverage>=50&&e.coverage<=65);assert(e.value>=0&&e.value<=100);assert(e.parts.every(p=>p.peers>=30));}}
+for(const lg of ['NFL','NBA']){const rows=depthRows.filter(r=>r.p.league===lg);const c=rows.reduce((a,r)=>{const k=h.hallScore(r.p,r.history).kind;a[k]=(a[k]||0)+1;return a;},{});console.log('HISTORICAL_SCORE_COVERAGE '+JSON.stringify({league:lg,total:rows.length,...c}));}
+console.log('Depth release: NBA award rows',mergedNBA.length,'NFL career rows',mergedNFL.length);

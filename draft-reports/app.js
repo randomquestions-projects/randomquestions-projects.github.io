@@ -227,6 +227,8 @@
     if(!first.childElementCount)first.appendChild(safeText('p','detail-empty','Verified career statistics not yet available.'));
     if(!second.childElementCount)second.appendChild(safeText('p','detail-empty','Verified honors not yet available.'));
     if(profile.note)first.appendChild(safeText('p','season-disclaimer',profile.note));
+    if(history?.additional_stat_sources?.some(x=>x.license==='CC BY 4.0'))first.appendChild(safeText('p','season-disclaimer','Additional career facts: nflverse (CC BY 4.0), exact name and games match.'));
+    if(Object.values(history?.historical_award_facts||{}).some(x=>x.license==='CC BY-SA 4.0'))second.appendChild(safeText('p','season-disclaimer','All-Star selection facts: Wikipedia, List of NBA All-Stars (CC BY-SA 4.0).'));
     if(history?.score_review)first.appendChild(safeText('p','season-disclaimer',history.score_review));
     if(history?.career_data_status==='legacy_statistics_unreviewed')first.appendChild(safeText('p','season-disclaimer','Legacy statistics not independently reconciled; ambiguous starts field omitted.'));
     const score=profile.score,coverage=score.kind==='observed'?history.observed_estimate.coverage:history?.coverage;
@@ -234,7 +236,7 @@
     if(sourceNote)sourceNote.textContent=score.kind==='observed'?'Career quality estimate · '+coverage+'% of model weight · mature 2000–2017 reference · observed career components only; not a full score or likelihood tier.':score.kind==='partial'?'Historical quality estimate · '+coverage+'% of model weight · missing components excluded.':'Historical career record · full model inputs not yet verified.';
     if(score.kind==='observed'){
       const e=history.observed_estimate;
-      const labels={win_shares:'Win Shares',vorp:'VORP',minutes:'Minutes',weighted_av:'Weighted AV',games:'Games played'};
+      const labels={win_shares:'Win Shares',vorp:'VORP',minutes:'Minutes',weighted_av:'Weighted AV',seasons_started:'Seasons started',games:'Games played'};
       first.appendChild(safeText('h4','season-title','Quality estimate components'));
       for(const part of e.parts)line(first,labels[part.key]||part.key,part.percentile.toFixed(1)+' percentile');
     }
