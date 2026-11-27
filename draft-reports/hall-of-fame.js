@@ -41,7 +41,8 @@ Draft identities checked against published yearly player exports.
   };
   const labels={inducted:'Hall of Famer',high:'High likelihood',medium:'Medium likelihood',low:'Low likelihood',early:'On pace · too early to tell'};
   const order=['inducted','high','medium','low','early'];
-  const models={NFL:'nfl-draft-v3',NBA:'nba-draft-v2'};
+  const models={NFL:'nfl-draft-v4',NBA:'nba-draft-v3'};
+  const thresholds={"NFL":{"high":91,"medium":90,"low":89},"NBA":{"high":89,"medium":87,"low":86}};
   const quality=p=>Number.isFinite(p.quality_score)?p.quality_score:Number.isFinite(p.rating?.quality)?p.rating.quality:null;
   const norm=s=>String(s||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
   function classify(p, model){
@@ -54,12 +55,12 @@ Draft identities checked against published yearly player exports.
       return k>=2 && Number.isFinite(p.pace?.score) && p.pace.score>=90 ? {tier:'early'}:null;
     }
     if(q===null)return null;
-    if(q>=90)return {tier:'high'};
-    if(q>=85)return {tier:'medium'};
-    if(q>=80)return {tier:'low'};
+    if(q>=thresholds[p.league].high)return {tier:'high'};
+    if(q>=thresholds[p.league].medium)return {tier:'medium'};
+    if(q>=thresholds[p.league].low)return {tier:'low'};
     return null;
   }
-  const api={ledger,labels,order,models,quality,classify};
+  const api={ledger,labels,order,models,thresholds,quality,classify};
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.DraftHall=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
