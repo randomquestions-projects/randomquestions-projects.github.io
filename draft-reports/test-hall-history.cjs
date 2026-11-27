@@ -98,3 +98,8 @@ assert(app.includes('historicalOnly?showHistoricalProfile(p,history):showProfile
 assert(app.includes("if(!$('player-dialog').open)$('player-dialog').showModal()"));
 assert(!app.includes("safeText('a','hall-player'"));
 console.log('Historical profile regression: Alex English',score.value,'(50% coverage); in-site historical profiles and missing-data guards passed');
+
+const nbaInductees=d.players.filter(p=>p.league==='NBA'&&p.induction_year&&h.hallScope({p:{league:'NBA'},history:p}));
+assert.equal(nbaInductees.filter(p=>!p.draft_id&&!p.career_summary).length,0);
+for(const [name,games] of [["Charlie Scott",560],["Cliff Hagan",745],["Connie Hawkins",499],["Dan Issel",718],["Louie Dampier",232],["Mel Daniels",11],["Spencer Haywood",760]]){const p=byName('NBA',name);assert.equal(p.career_summary.games,games);assert(p.career_data_source.scope.includes('excluding ABA'));}
+console.log('NBA Hall career coverage:',nbaInductees.length,'inductees, none without a career summary or linked draft profile');
