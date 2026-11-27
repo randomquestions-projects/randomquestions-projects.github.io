@@ -870,7 +870,7 @@
       const response=await fetch('./data/hall-history.json',{cache:'no-cache'});
       if(!response.ok)throw Error('Historical directory unavailable');
       const historical=await response.json();
-      if(historical.schema_version!==1||!Array.isArray(historical.players))throw Error('Invalid historical directory');
+      if(historical.schema_version!==2||!Array.isArray(historical.players))throw Error('Invalid historical directory');
       const byId=new Map(picks.map(p=>[p.id,p]));
       const indexed=new Map(rows.map(x=>[x.p.id,x]));
       const seen=new Set();
@@ -891,6 +891,14 @@
         }else{
           rows.push({p:{id:entry.id,league,name:entry.name,position:entry.position||'',team:'',college:'',year:null,overall:null,quality_score:null,pace:null},h:{tier:entry.induction_year?'inducted':'ballot',year:entry.induction_year},history:entry,historicalOnly:true});
         }
+      }
+      const upcoming=historical.upcoming.filter(x=>x.draft_id.startsWith(league.toLowerCase()+'-'));
+      for(const e of upcoming){
+        const p=byId.get(e.draft_id);
+        if(!p||p.name!==e.name)throw Error('Eligibility identity mismatch '+e.draft_id);
+        let row=indexed.get(p.id);
+        if(!row){row={p,h:{tier:'upcoming'}};rows.push(row);indexed.set(p.id,row);}
+        if(row.h.tier!=='inducted')row.eligibility=e;
       }
       hallCache.set(league,rows);
     })();
@@ -916,43 +924,53 @@
     const year=$('hall-era').value, tier=$('hall-tier').value, q=$('hall-search').value.trim().toLowerCase(), sort=$('hall-sort').value;
     const scoped=data.filter(({p})=>year==='all'||String(p.year)===year);
     const kpis=$('hall-kpis');kpis.replaceChildren();
-    for(const t of [...DraftHall.order,'ballot']){
-      const count=scoped.filter(x=>x.h.tier===t).length;
+    for(const t of [...DraftHall.order,'ballot','upcoming']){
+      const count=scoped.filter(x=>t==='upcoming'?x.eligibility:x.h.tier===t).length;
       const b=safeText('button','honor-metric','');b.type='button';b.setAttribute('aria-pressed',String(tier===t));
       b.appendChild(safeText('span','honor-metric-count',String(count)));
-      b.appendChild(safeText('span','honor-metric-label',(DraftHall.labels[t]||'Ballot history')));
-      b.appendChild(safeText('span','honor-metric-extra',t==='inducted'?'Directory records':t==='early'?'Strong start':t==='ballot'?'Not model-ranked':'Model tier'));
+      b.appendChild(safeText('span','honor-metric-label',(DraftHall.labels[t]||(t==='upcoming'?'Estimated eligibility':'Ballot history'))));
+      b.appendChild(safeText('span','honor-metric-extra',t==='inducted'?'Directory records':t==='early'?'Strong start':t==='ballot'?'Not model-ranked':t==='upcoming'?'2027–2031 · estimated':'Model tier'));
       b.addEventListener('click',()=>{$('hall-tier').value=tier===t?'all':t;renderHall();});kpis.appendChild(b);
     }
-    const rows=scoped.filter(({p,h})=>(tier==='all'||h.tier===tier)&&(!q||[p.name,p.team,p.position||'',p.college||''].some(x=>x.toLowerCase().includes(q))));
+    const rows=scoped.filter(({p,h,eligibility})=>(tier==='all'||(tier==='upcoming'?!!eligibility:h.tier===tier))&&(!q||[p.name,p.team,p.position||'',p.college||''].some(x=>x.toLowerCase().includes(q))));
     const qv=p=>DraftHall.quality(p)??-1, pv=p=>p.pace?.score??-1;
     rows.sort((a,b)=>{
       const x=a.p,y=b.p;
       if(sort==='name')return x.name.localeCompare(y.name);
       if(sort==='year')return (y.year||0)-(x.year||0)||(x.overall||0)-(y.overall||0);
       if(sort==='quality')return qv(y)-qv(x)||pv(y)-pv(x)||x.name.localeCompare(y.name);
+      if(sort==='partial')return (b.history?.partial_score??-1)-(a.history?.partial_score??-1)||x.name.localeCompare(y.name);
+      if(sort==='eligibility')return (a.eligibility?.estimated_first_eligible_class??9999)-(b.eligibility?.estimated_first_eligible_class??9999)||x.name.localeCompare(y.name);
       if(sort==='pace')return pv(y)-pv(x)||qv(y)-qv(x)||x.name.localeCompare(y.name);
-      return [...DraftHall.order,'ballot'].indexOf(a.h.tier)-[...DraftHall.order,'ballot'].indexOf(b.h.tier)||(a.h.tier==='early'?pv(y)-pv(x):qv(y)-qv(x))||x.name.localeCompare(y.name);
+      return [...DraftHall.order,'ballot','upcoming'].indexOf(a.h.tier)-[...DraftHall.order,'ballot','upcoming'].indexOf(b.h.tier)||(a.h.tier==='early'?pv(y)-pv(x):qv(y)-qv(x))||x.name.localeCompare(y.name);
     });
-    $('hall-status').textContent=league+' · '+data.length+' directory and watchlist entries · historical identities and scores still under review';
+    $('hall-status').textContent=league+' · '+data.length+' directory and watchlist entries · partial scores and eligibility estimates shown separately';
     $('hall-count').textContent=rows.length+' players';
     const target=$('hall-rows');target.replaceChildren();
-    for(const {p,h,history,historicalOnly} of rows){
+    for(const {p,h,history,historicalOnly,eligibility} of rows){
       const tr=document.createElement('tr');
       const first=document.createElement('td');
       if(historicalOnly){
-        const a=safeText('a','hall-player',p.name+' ↗');a.href=history.source;a.target='_blank';a.rel='noopener noreferrer';first.appendChild(a);
+        const a=safeText('a','hall-player',p.name+' ↗');a.href=history.official_url||history.source;a.target='_blank';a.rel='noopener noreferrer';first.appendChild(a);
       }else{
         const b=safeText('button','hall-player',p.name+' ↗');b.type='button';b.addEventListener('click',()=>showProfile(p));first.appendChild(b);
       }
       const ballotYears=[...new Set([...(history?.ballots||[]).map(x=>x.year),...(history?.finalist_years||[])])].sort((a,b)=>b-a);
       if(ballotYears.length)first.appendChild(safeText('div','player-detail','Ballot / finalist: '+ballotYears.join(', ')));
+      if(history?.induction_verification==='review')first.appendChild(safeText('div','player-detail','Induction identity under review'));
+      if(eligibility)first.appendChild(safeText('div','player-detail','Estimated eligibility: '+eligibility.estimated_first_eligible_class+' · last observed '+eligibility.last_observed_season));
+      if(history?.career_summary||history?.award_counts_through_2024){
+        const details=document.createElement('details');details.appendChild(safeText('summary','player-detail','Historical stats & awards'));
+        for(const [k,v] of Object.entries(history.career_summary||{}))details.appendChild(safeText('div','player-detail',k.replaceAll('_',' ')+': '+Number(v).toLocaleString()));
+        for(const [k,v] of Object.entries(history.award_counts_through_2024||{}))details.appendChild(safeText('div','player-detail',k.replaceAll('_',' ')+': '+v+' (through 2024)'));
+        first.appendChild(details);
+      }
       tr.appendChild(first);
-      for(const v of [p.year?p.year+' · #'+p.overall:'Outside draft dataset',p.position||'—',qv(p)<0?'Insufficient data':qv(p).toFixed(1),pv(p)<0?'—':pv(p).toFixed(1)])tr.appendChild(safeText('td','',v));
-      const status=document.createElement('td');status.appendChild(safeText('span','hall-tier hall-'+h.tier,DraftHall.labels[h.tier]||'Ballot history'));tr.appendChild(status);
+      for(const v of [p.year?p.year+' · #'+p.overall:'Outside draft dataset',p.position||'—',qv(p)<0?'Insufficient data':qv(p).toFixed(1),Number.isFinite(history?.partial_score)?history.partial_score.toFixed(1)+' · '+history.coverage+'%':'—',pv(p)<0?'—':pv(p).toFixed(1)])tr.appendChild(safeText('td','',v));
+      const status=document.createElement('td');status.appendChild(safeText('span','hall-tier hall-'+h.tier,DraftHall.labels[h.tier]||(h.tier==='upcoming'?'Estimated eligibility':'Ballot history')));tr.appendChild(status);
       tr.appendChild(safeText('td','',h.year?String(h.year):'—'));target.appendChild(tr);
     }
-    if(!rows.length){const tr=document.createElement('tr'),td=safeText('td','','No matching players. Change the filters.');td.colSpan=7;tr.appendChild(td);target.appendChild(tr);}
+    if(!rows.length){const tr=document.createElement('tr'),td=safeText('td','','No matching players. Change the filters.');td.colSpan=8;tr.appendChild(td);target.appendChild(tr);}
   }
   async function main() {
     $('copyright-year').textContent = String(new Date().getFullYear());
