@@ -122,3 +122,13 @@ assert.equal(byName('NFL','Bill George').career_summary.seasons_played,15);
 assert(!h.hallScope({p:{league:'NFL'},history:byName('NFL','George Halas')}));
 const hutson=byName('NFL','Don Hutson');assert.equal(h.historicalProfile({league:'NFL',name:hutson.name},hutson).awards.find(a=>a.label==='Pro Bowl selections').value,4);
 console.log('Official historical Pro Bowl counts:',officialAwardRows.length,'; official production facts and role corrections checked');
+
+// Dated official major awards must not duplicate existing count rows.
+const mj=byName('NBA','Michael Jordan');
+assert.deepEqual(mj.historical_award_facts.finals_mvp.years,[1991,1992,1993,1996,1997,1998]);
+assert.equal(mj.historical_award_facts.mvp.value,5);
+const jordanProfile=h.historicalProfile({league:'NBA',name:mj.name},mj);
+assert.equal(jordanProfile.awards.filter(a=>a.label==='Most Valuable Player').length,1);
+assert.deepEqual(byName('NFL','Lawrence Taylor').historical_award_facts.dpoy.years,[1981,1982,1986]);
+for(const p of d.players)for(const a of Object.values(p.historical_award_facts||{}))if(a.years){assert.equal(a.value,new Set(a.years).size);assert(a.years.every(y=>y<=p.induction_year));}
+console.log('Historical major-award event reconciliation passed');

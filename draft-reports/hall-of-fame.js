@@ -172,12 +172,13 @@ Draft identities checked against published yearly player exports.
     const stats=[],awards=[],seen=new Set();
     const c=history?.career_summary||{};
     for(const [key,fact] of Object.entries(history?.historical_award_facts||{})){
-      if(key==='pro_bowl_selections'&&Number.isFinite(fact?.value)){
-        awards.push({label:'Pro Bowl selections',value:fact.value,scope:fact.scope});seen.add('pro_bowls');
+      const label=key==='pro_bowl_selections'?'Pro Bowl selections':statLabels[key];
+      if(label&&Number.isFinite(fact?.value)){
+        awards.push({label,value:fact.value,scope:[fact.scope,Array.isArray(fact.years)?fact.years.join(', '):null].filter(Boolean).join(' · ')});seen.add(key==='pro_bowl_selections'?'pro_bowls':key);
       }
     }
     for(const [key,v] of Object.entries(history?.award_counts_through_2024||{})){
-      if(Number.isFinite(v)){awards.push({label:labels(key),value:v,scope:'through 2024'});seen.add(key);}
+      if(Number.isFinite(v)&&!seen.has(key)){awards.push({label:labels(key),value:v,scope:'through 2024'});seen.add(key);}
     }
     for(const [key,v] of Object.entries(c)){
       if(!Number.isFinite(v)||key==='legacy_starts_field'||key==='starts')continue;
