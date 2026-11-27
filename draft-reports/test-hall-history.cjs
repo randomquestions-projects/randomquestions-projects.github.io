@@ -54,9 +54,15 @@ for(const [name,draft,position,score] of [['Andrei Kirilenko','1999 · #24','F',
  const r=rowFor(name);assert.equal(h.historicalDraftLabel(r.p,r.history),draft);assert.equal(h.positionLabel(r.p,r.history),position);assert.equal(h.hallScore(r.p,r.history).label,score);assert(h.hallScope(r,'career'));
 }
 for(const name of ['Alline Banks Sprouse','Amaury Pasos','Amaya Valdemore']){
- const r=rowFor(name);assert(!h.hallScope(r,'career'));assert(h.hallScope(r,'directory'));assert.equal(h.hallScore(r.p,r.history).kind,'not_applicable');
+ const r=rowFor(name);assert(!h.hallScope(r,'career'));assert(!h.hallScope(r,'directory'));assert.equal(h.hallScore(r.p,r.history).kind,'not_applicable');
 }
 assert.equal(h.hallScore({quality_score:95},{partial_score:99}).kind,'full');
 assert.equal(h.hallScore({},{}).kind,'missing');
 assert.equal(h.historicalDraftLabel({},{}),'Draft not verified');
 assert.equal(h.historicalDraftLabel({year:2003,overall:1},{}),'2003 · #1');
+
+assert(h.hallScope({p:{league:'NBA'},history:byName('NBA','Dino Rađa')}));
+assert(!h.hallScope({p:{league:'NBA'},history:byName('NBA','Oscar Schmidt')}));
+assert(!h.hallScope({p:{league:'NFL'},history:{official_role:'coach'}}));
+assert(h.hallScope({p:{league:'NFL'},history:{official_role:'player'}}));
+assert.equal(byName('NFL','Charley Conerly').position,'QB');

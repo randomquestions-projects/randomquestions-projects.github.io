@@ -838,7 +838,7 @@
     $('view-college').addEventListener('click',()=>{collegeView='college';renderCollege();syncCollegeUrl();});
     $('view-hall').addEventListener('click',()=>{collegeView='hall';renderCollege();syncCollegeUrl();});
     $('view-comparison').addEventListener('click',()=>{collegeView='comparison';renderCollege();syncCollegeUrl();});
-    for(const id of ['hall-tier','hall-era','hall-position','hall-sort','hall-search','hall-scope'])$(id).addEventListener(id==='hall-search'?'input':'change',renderHall);
+    for(const id of ['hall-tier','hall-era','hall-position','hall-sort','hall-search'])$(id).addEventListener(id==='hall-search'?'input':'change',renderHall);
     for(let y=2026;y>=2000;y--){const opt=safeText('option','',String(y));opt.value=String(y);$('hall-era').appendChild(opt);}
     $('college-era').addEventListener('change',e=>{collegeEra=e.target.value;selectedCollege=null;renderCollege();});
     $('college-position').addEventListener('change',e=>{collegePosition=e.target.value;selectedCollege=null;renderCollege();});
@@ -935,8 +935,6 @@
       positionSelect.dataset.league=league;
       positionSelect.value='all';
     }
-    const scopeSelect=$('hall-scope');$('hall-scope-block').hidden=league!=='NBA';
-    const scope=league==='NBA'?scopeSelect.value:'directory';
     const eraSelect=$('hall-era');
     if(eraSelect.dataset.league!==league){
       eraSelect.replaceChildren();
@@ -946,7 +944,7 @@
       eraSelect.dataset.league=league;
     }
     const year=eraSelect.value, tier=$('hall-tier').value, position=positionSelect.value, q=$('hall-search').value.trim().toLowerCase(), sort=$('hall-sort').value;
-    const population=data.filter(row=>DraftHall.hallScope(row,scope));
+    const population=data.filter(DraftHall.hallScope);
     const scoped=population.filter(({p,history})=>(year==='all'||(year==='undrafted'?history?.historical_draft?.status==='undrafted':String(p.year||history?.historical_draft?.year)===year))&&DraftHall.matchesPosition(p,history,position));
     const kpis=$('hall-kpis');kpis.replaceChildren();
     for(const t of [...DraftHall.order,'ballot','upcoming']){
@@ -969,7 +967,7 @@
       if(sort==='pace')return pv(y)-pv(x)||qv(y)-qv(x)||x.name.localeCompare(y.name);
       return [...DraftHall.order,'ballot','upcoming'].indexOf(a.h.tier)-[...DraftHall.order,'ballot','upcoming'].indexOf(b.h.tier)||(a.h.tier==='early'?pv(y)-pv(x):qv(y)-qv(x))||(b.history?.partial_score??-1)-(a.history?.partial_score??-1)||x.name.localeCompare(y.name);
     });
-    $('hall-status').textContent=league+' · '+population.length+' entries'+(league==='NBA'&&scope!=='directory'?' with NBA draft / historical pro-career evidence · '+(data.length-population.length)+' additional records in full directory':' · full directory')+' · est. = historical partial estimate, not full quality';
+    $('hall-status').textContent=league+' · '+population.length+' player entries · '+population.filter(x=>DraftHall.hallScore(x.p,x.history).kind==='full').length+' full scores · '+population.filter(x=>DraftHall.hallScore(x.p,x.history).kind==='partial').length+' historical estimates · '+population.filter(x=>DraftHall.hallScore(x.p,x.history).kind==='missing').length+' not yet scored';
     $('hall-count').textContent=rows.length+' players';
     const target=$('hall-rows');target.replaceChildren();
     for(const {p,h,history,historicalOnly,eligibility} of rows){

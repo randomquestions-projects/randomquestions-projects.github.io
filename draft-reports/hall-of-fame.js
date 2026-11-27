@@ -99,9 +99,9 @@ Draft identities checked against published yearly player exports.
   function matchesPosition(p,history,filter){
     return filter==='all'||positionGroups(p.league,positionLabel(p,history)).has(filter);
   }
-  function hallScope(row,scope){
-    if(row.p.league!=='NBA'||scope==='directory')return true;
+  function hallScope(row){
     if(!row.history||row.history.draft_id)return true;
+    if(row.p.league==='NFL')return row.history.official_role==='player';
     return ['nba_verified','historical_pro_stats','draft_linked'].includes(row.history.pro_career_scope);
   }
   function historicalDraftLabel(p,history){
