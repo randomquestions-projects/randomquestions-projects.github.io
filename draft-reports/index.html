@@ -94,20 +94,20 @@
         <section id="comparison-view" class="college-view" aria-labelledby="comparison-heading" hidden>
           <div class="college-head"><div class="small-kicker">CAREER TRAJECTORIES / MATCHED MILESTONES</div><h3 id="comparison-heading">How do they stack up <em>at the same stage?</em></h3><p>Compare cumulative regular-season production at the same number of seasons played or verified game milestones. Historical greats and modern stars appear when their early-career history is available.</p></div>
           <div class="college-filters">
-            <div class="filter-block"><label for="compare-player">FOCUS PLAYER</label><div class="select-shell"><select id="compare-player"></select></div></div>
+            <div class="filter-block"><label for="compare-focus-search">SEARCH FOCUS PLAYER</label><div class="search-shell"><input type="search" id="compare-focus-search" placeholder="Jefferson, Gibbs…" autocomplete="off"></div></div><div class="filter-block"><label for="compare-player">FOCUS PLAYER</label><div class="select-shell"><select id="compare-player"></select></div></div>
             <div class="filter-block"><label for="compare-basis">CAREER STAGE</label><div class="select-shell"><select id="compare-basis"><option value="seasons">Seasons played</option><option value="games">Games played</option></select></div></div>
             <div class="filter-block"><label for="compare-stage">MATCHED MILESTONE</label><div class="select-shell"><select id="compare-stage"></select></div></div>
             <div class="filter-block"><label for="compare-metric">STATISTIC</label><div class="select-shell"><select id="compare-metric"></select></div></div>
           </div>
           <div class="college-filters">
-            <div class="filter-block"><label for="compare-peer">ADD COMPARISON PLAYER</label><div class="select-shell"><select id="compare-peer"></select></div></div>
+            <div class="filter-block"><label for="compare-peer-search">SEARCH COMPARISON PLAYER</label><div class="search-shell"><input type="search" id="compare-peer-search" placeholder="Rice, Sanders…" autocomplete="off"></div></div><div class="filter-block"><label for="compare-peer">ADD COMPARISON PLAYER</label><div class="select-shell"><select id="compare-peer"></select></div></div>
             <button class="view-toggle" id="compare-add" type="button">Add player</button><button class="view-toggle" id="compare-greats" type="button">Suggest greats</button>
           </div>
           <div id="compare-status" class="college-status" role="status"></div>
           <div id="compare-selected" class="draft-view-toggle" aria-label="Selected comparison players"></div>
           <div id="compare-chart" style="width:100%;overflow-x:auto;margin:16px 0"></div>
           <div class="table-scroll"><table class="draft-table"><thead id="compare-head"></thead><tbody id="compare-rows"></tbody></table></div>
-          <p class="cohort-caveat">Regular-season totals only. NFL incomplete current seasons are excluded from completed-season comparisons. Games mode uses verified cumulative checkpoints (NFL every 5 games; NBA every 25); unavailable histories are never estimated or filled with zero. Same seasons means seasons actually played, not age or years since draft. Suggested greats use position group (NFL), historical Hall of Fame source flags where available, and existing career quality; they are not forecasts.</p>
+          <p class="cohort-caveat">Regular-season totals only. NFL incomplete current seasons are excluded from completed-season comparisons. Games mode uses verified cumulative checkpoints (NFL every 5 games; NBA every 25); unavailable histories are never estimated or filled with zero. Same seasons means seasons actually played, not age or years since draft. Suggested greats use position group (NFL), historical Hall of Fame source flags where available, and existing career quality; they are not forecasts. Season length, era, usage, injuries and team context differ; these are descriptive raw totals, not era-adjusted ratings. Selected older NFL legends: official NFL.com career season summaries. Modern NFL data: nflverse (CC BY 4.0). Basketball: NBA Stats via SportsDataverse and historical season research.</p>
         </section>
 
         <section id="hall-view" class="college-view" aria-labelledby="hall-heading" hidden>

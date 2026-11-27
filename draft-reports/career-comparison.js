@@ -14,27 +14,30 @@ function fill(select,items,value){select.replaceChildren(...items.map(x=>opt(x[0
 function getState(d){if(!states.has(d.league)){const name=d.league==='NFL'?'Justin Jefferson':'Victor Wembanyama';const p=d.players.find(x=>x.name===name)||d.players[0];states.set(d.league,{focus:p.id,basis:'seasons',stage:p.seasons.at(-1)?.n||1,metric:d.league==='NFL'?'receiving_yards':'points',peers:[]});const s=states.get(d.league);s.peers=suggest(d,p,s.basis,s.stage);}return states.get(d.league);}
 function update(){if(active&&cache.has(active))paint(cache.get(active));}
 function wire(){if(wired)return;wired=true;
- $('compare-player').onchange=()=>{const d=cache.get(active),s=getState(d);s.focus=$('compare-player').value;const p=d.players.find(x=>x.id===s.focus);s.stage=p[s.basis].at(-1)?.n||p.seasons.at(-1)?.n||1;s.peers=suggest(d,p,s.basis,s.stage);update();};
- $('compare-basis').onchange=()=>{const d=cache.get(active),s=getState(d);s.basis=$('compare-basis').value;s.stage=d.players.find(p=>p.id===s.focus)[s.basis].at(-1)?.n||1;update();};
+ $('compare-player').onchange=()=>{const d=cache.get(active),s=getState(d);s.focus=$('compare-player').value;const p=d.players.find(x=>x.id===s.focus);s.metric=d.league==='NFL'?(nflGroup[p.position]||[])[0]:'points';s.stage=p[s.basis].at(-1)?.n||p.seasons.at(-1)?.n||1;s.peers=suggest(d,p,s.basis,s.stage);update();};
+ $('compare-basis').onchange=()=>{const d=cache.get(active),s=getState(d);s.basis=$('compare-basis').value;const p=d.players.find(p=>p.id===s.focus);s.stage=p[s.basis].at(-1)?.n||1;s.peers=suggest(d,p,s.basis,s.stage);update();};
  $('compare-stage').onchange=()=>{getState(cache.get(active)).stage=Number($('compare-stage').value);update();};
  $('compare-metric').onchange=()=>{getState(cache.get(active)).metric=$('compare-metric').value;update();};
+ $('compare-focus-search').oninput=update;
+ $('compare-peer-search').oninput=update;
  $('compare-add').onclick=()=>{const s=getState(cache.get(active)),id=$('compare-peer').value;if(id&&id!==s.focus&&!s.peers.includes(id)&&s.peers.length<5)s.peers.push(id);update();};
  $('compare-greats').onclick=()=>{const d=cache.get(active),s=getState(d),p=d.players.find(x=>x.id===s.focus);s.peers=suggest(d,p,s.basis,s.stage);update();};
 }
 function paint(d){const s=getState(d),p=d.players.find(x=>x.id===s.focus),sorted=[...d.players].sort((a,b)=>a.name.localeCompare(b.name));if(!p)return;
- fill($('compare-player'),sorted.map(q=>[q.id,q.name+' · '+q.position]),s.focus);
+ const fq=$('compare-focus-search').value.trim().toLowerCase(),pq=$('compare-peer-search').value.trim().toLowerCase();
+ fill($('compare-player'),sorted.filter(q=>q.id===p.id||!fq||q.name.toLowerCase().includes(fq)).map(q=>[q.id,q.name+' · '+q.position]),s.focus);
  if(!p.games.length&&s.basis==='games')s.basis='seasons';$('compare-basis').value=s.basis;$('compare-basis').querySelector('option[value=games]').disabled=!p.games.length;
  const stages=p[s.basis];if(!stages.some(x=>x.n===s.stage))s.stage=stages.at(-1)?.n||1;
  fill($('compare-stage'),stages.map(x=>[String(x.n),'First '+x.n+' '+s.basis]),s.stage);
  const focusStats=checkpoint(p,s.basis,s.stage)||{}, keys=(d.league==='NFL'?(nflGroup[p.position]||Object.keys(metrics.NFL)):Object.keys(metrics.NBA)).filter(k=>Number.isFinite(focusStats[k]));
  if(!keys.includes(s.metric))s.metric=keys[0]||'';
  fill($('compare-metric'),keys.map(k=>[k,metrics[d.league][k]]),s.metric);
- fill($('compare-peer'),[['','Choose a player'],...sorted.filter(q=>q.id!==p.id&&!s.peers.includes(q.id)&&(d.league!=='NFL'||q.position===p.position)&&checkpoint(q,s.basis,s.stage)).map(q=>[q.id,q.name])],'');
+ fill($('compare-peer'),[['','Choose a player'],...sorted.filter(q=>q.id!==p.id&&!s.peers.includes(q.id)&&(d.league!=='NFL'||q.position===p.position)&&checkpoint(q,s.basis,s.stage)&&(!pq||q.name.toLowerCase().includes(pq))).map(q=>[q.id,q.name])],'');
  $('compare-add').disabled=s.peers.length>=5;
  const people=[p,...s.peers.map(id=>d.players.find(q=>q.id===id)).filter(Boolean)];const status=$('compare-status');status.textContent=d.players.length.toLocaleString()+' players · '+d.audit.game_verified_players.toLocaleString()+' with verified game milestones · '+(p.games.length?'Exact game checkpoints available for '+p.name:'Game milestones unavailable for '+p.name+'; seasons only.');
  const selected=$('compare-selected');selected.replaceChildren();for(const q of people.slice(1)){let b=el('button',q.name+' ×');b.type='button';b.className='view-toggle';b.onclick=()=>{s.peers=s.peers.filter(id=>id!==q.id);update();};selected.appendChild(b);}
- const head=$('compare-head'),body=$('compare-rows');head.replaceChildren();body.replaceChildren();let tr=el('tr');for(const name of ['PLAYER','GAMES (IF KNOWN)',...keys.map(k=>metrics[d.league][k]),'Δ '+(metrics[d.league][s.metric]||'STAT')+' VS FOCUS'])tr.appendChild(el('th',name));head.appendChild(tr);
- for(const q of people){let st=checkpoint(q,s.basis,s.stage),row=el('tr');row.appendChild(el('td',q.name+(q.id===p.id?' (focus)':'')));row.appendChild(el('td',st?fmt(s.basis==='games'?s.stage:st.games):'Not reached'));for(const k of keys)row.appendChild(el('td',fmt(st?.[k])));let delta=st?.[s.metric]-focusStats[s.metric];row.appendChild(el('td',q.id===p.id?'—':Number.isFinite(delta)?(delta>0?'+':'')+fmt(delta):'—'));body.appendChild(row);}
+ const head=$('compare-head'),body=$('compare-rows');head.replaceChildren();body.replaceChildren();let tr=el('tr');for(const name of ['PLAYER','GAMES (IF KNOWN)',...keys.map(k=>metrics[d.league][k]),(metrics[d.league][s.metric]||'STAT')+' / GAME','Δ '+(metrics[d.league][s.metric]||'STAT')+' VS FOCUS'])tr.appendChild(el('th',name));head.appendChild(tr);
+ for(const q of people){let st=checkpoint(q,s.basis,s.stage),row=el('tr');row.appendChild(el('td',q.name+(q.id===p.id?' (focus)':'')));row.appendChild(el('td',st?fmt(s.basis==='games'?s.stage:st.games):'Not reached'));for(const k of keys)row.appendChild(el('td',fmt(st?.[k])));const gp=s.basis==='games'?s.stage:st?.games;row.appendChild(el('td',st&&gp>0?fmt(st[s.metric]/gp):'—'));let delta=st?.[s.metric]-focusStats[s.metric];row.appendChild(el('td',q.id===p.id?'—':Number.isFinite(delta)?(delta>0?'+':'')+fmt(delta):'—'));body.appendChild(row);}
  chart(people,s,metrics[d.league][s.metric]||'Statistic');
 }
 function chart(people,s,label){const host=$('compare-chart');host.replaceChildren();const NS='http://www.w3.org/2000/svg',svg=document.createElementNS(NS,'svg');svg.setAttribute('viewBox','0 0 640 300');svg.setAttribute('role','img');svg.setAttribute('aria-label','Cumulative '+label+' by '+s.basis);svg.style.cssText='width:100%;min-width:320px;max-height:360px';
