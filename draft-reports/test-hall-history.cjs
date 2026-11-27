@@ -103,3 +103,11 @@ const nbaInductees=d.players.filter(p=>p.league==='NBA'&&p.induction_year&&h.hal
 assert.equal(nbaInductees.filter(p=>!p.draft_id&&!p.career_summary).length,0);
 for(const [name,games] of [["Charlie Scott",560],["Cliff Hagan",745],["Connie Hawkins",499],["Dan Issel",718],["Louie Dampier",232],["Mel Daniels",11],["Spencer Haywood",760]]){const p=byName('NBA',name);assert.equal(p.career_summary.games,games);assert(p.career_data_source.scope.includes('excluding ABA'));}
 console.log('NBA Hall career coverage:',nbaInductees.length,'inductees, none without a career summary or linked draft profile');
+
+const guideRows=d.players.filter(p=>p.career_data_source?.kind==='official_hall_media_guide');
+assert.equal(guideRows.length,213);
+for(const p of guideRows){assert.equal(p.league,'NFL');assert(p.induction_year);assert(p.career_summary.games>0);assert(p.career_summary.seasons_played>0);assert(p.career_data_source.source.startsWith('https://static.clubs.nfl.com/'));}
+assert.equal(byName('NFL','Don Hutson').career_summary.games,116);
+assert.equal(byName('NFL','Deacon Jones').career_summary.games,191);
+assert.equal(byName('NFL','Jim Thorpe').career_summary.games,52);
+console.log('NFL historical media-guide career baselines:',guideRows.length);
