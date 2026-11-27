@@ -2,10 +2,10 @@ const assert=require('node:assert/strict'), fs=require('node:fs'), path=require(
 const h=require('./hall-of-fame.js');
 const p={name:'Test',league:'NFL',year:2010,overall:1,pace:{seasons:16,score:95},rating:{quality:90}};
 const m=h.models.NFL;
-assert.equal(h.classify(p,m).tier,'high');
-assert.equal(h.classify({...p,rating:{quality:85}},m).tier,'medium');
-assert.equal(h.classify({...p,rating:{quality:80}},m).tier,'low');
-assert.equal(h.classify({...p,rating:{quality:79.9}},m),null);
+assert.equal(h.classify({...p,rating:{quality:h.thresholds.NFL.high}},m).tier,'high');
+assert.equal(h.classify({...p,rating:{quality:h.thresholds.NFL.medium}},m).tier,'medium');
+assert.equal(h.classify({...p,rating:{quality:h.thresholds.NFL.low}},m).tier,'low');
+assert.equal(h.classify({...p,rating:{quality:h.thresholds.NFL.low-.1}},m),null);
 assert.equal(h.classify({...p,year:2023,pace:{seasons:3,score:90},rating:null},m).tier,'early');
 assert.equal(h.classify({...p,year:2025,pace:{seasons:1,score:99}},m),null);
 assert.equal(h.classify({...p,year:2021,pace:{seasons:5,score:89}},m),null);
