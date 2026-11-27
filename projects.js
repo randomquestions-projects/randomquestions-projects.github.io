@@ -117,5 +117,16 @@ window.RQ_PROJECTS = [
     searchKeywords: ['youth', 'children', 'enrollment', 'participation', 'football', 'basketball', 'soccer', 'cost', 'income', 'affordability', 'geography'],
     url: 'https://randomquestions-projects.github.io/youth-sports-atlas/',
     theme: 'default'
+  },
+  {
+    id: 'athletic-index',
+    title: 'Athletic Index',
+    shortName: 'AI',
+    domain: 'COLLEGE ALL-SPORTS RESEARCH',
+    description: 'Beyond football: compare national championship finalists across sports, explore historical all-sports results, and change the weighting of football and basketball. Coverage-limited release.',
+    categories: ['Sports', 'Rankings'],
+    searchKeywords: ['NCAA', 'Florida', 'Gators', 'Directors Cup', 'Capital One Cup', 'college athletics', 'championships', 'women', 'men'],
+    url: 'https://randomquestions-projects.github.io/athletic-index/',
+    theme: 'default'
   }
 ];
