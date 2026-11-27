@@ -229,7 +229,7 @@
     if(profile.note)first.appendChild(safeText('p','season-disclaimer',profile.note));
     if(history?.additional_stat_sources?.some(x=>x.license==='CC BY 4.0'))first.appendChild(safeText('p','season-disclaimer','Additional career facts: nflverse (CC BY 4.0), exact name and games match.'));
     if(history?.additional_stat_sources?.some(x=>x.license==='CC BY-SA 4.0'))first.appendChild(safeText('p','season-disclaimer','Additional reported career facts: Wikipedia (CC BY-SA 4.0), matched by name and Hall induction year. Historical league scope and tackle/sack definitions may vary. Reported sacks are not official sack totals.'));
-    if(Object.values(history?.historical_award_facts||{}).some(x=>x.license==='CC BY-SA 4.0'))second.appendChild(safeText('p','season-disclaimer','All-Star selection facts: Wikipedia, List of NBA All-Stars (CC BY-SA 4.0).'));
+    if(Object.values(history?.historical_award_facts||{}).some(x=>x.license==='CC BY-SA 4.0'))second.appendChild(safeText('p','season-disclaimer','Additional reported award facts: Wikipedia (CC BY-SA 4.0); source and playing scope recorded in historical ledger.'));
     if(history?.score_review)first.appendChild(safeText('p','season-disclaimer',history.score_review));
     if(history?.career_data_status==='legacy_statistics_unreviewed')first.appendChild(safeText('p','season-disclaimer','Legacy statistics not independently reconciled; ambiguous starts field omitted.'));
     const score=profile.score,coverage=score.kind==='observed'?history.observed_estimate.coverage:history?.coverage;

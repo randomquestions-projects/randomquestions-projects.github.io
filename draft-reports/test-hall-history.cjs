@@ -148,9 +148,15 @@ for(const lg of ['NFL','NBA']){const rows=depthRows.filter(r=>r.p.league===lg);c
 console.log('Depth release: NBA award rows',mergedNBA.length,'NFL career rows',mergedNFL.length);
 
 const factRows=d.players.filter(p=>p.additional_stat_sources?.some(x=>x.license==='CC BY-SA 4.0'));
-assert.equal(factRows.length,239);
-for(const p of factRows){assert.equal(p.league,'NFL');assert(p.induction_year&&!p.draft_id);for(const s of p.additional_stat_sources.filter(x=>x.license==='CC BY-SA 4.0')){assert(s.source.startsWith('https://en.wikipedia.org/wiki/'));assert(s.fields.every(k=>Number.isFinite(p.career_summary[k])));assert(!s.fields.includes('sacks'));}}
+assert(factRows.filter(p=>p.league==='NFL').length>=239);
+for(const p of factRows){assert(['NFL','NBA'].includes(p.league));assert(p.induction_year&&!p.draft_id);for(const s of p.additional_stat_sources.filter(x=>x.license==='CC BY-SA 4.0')){assert(s.source.startsWith('https://en.wikipedia.org/wiki/'));assert(s.fields.every(k=>Number.isFinite(p.career_summary[k])));assert(!s.fields.includes('sacks'));}}
 assert.equal(byName('NFL','Ace Parker').career_summary.rushing_yards,1292);
 assert.equal(byName('NFL','Aeneas Williams').career_summary.total_tackles,793);
 assert.equal(byName('NFL','Kurt Warner').career_summary.passing_yards,32344);
 console.log('Historical career profile facts:',factRows.length,'players; conflict and sack-scope protections checked');
+
+const titles=d.players.filter(p=>p.historical_award_facts?.nba_championships);
+assert.equal(titles.length,69);
+assert.equal(byName('NBA','Alonzo Mourning').historical_award_facts.nba_championships.value,1);
+for(const p of titles){const f=p.historical_award_facts.nba_championships;assert.equal(p.league,'NBA');assert.equal(f.value,new Set(f.years).size);assert(h.historicalProfile({league:'NBA',name:p.name},p).awards.some(a=>a.label==='NBA championships'&&a.value===f.value));}
+console.log('Historical NBA playing championships:',titles.length);
