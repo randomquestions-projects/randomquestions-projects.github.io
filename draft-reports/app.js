@@ -537,7 +537,7 @@
     const league = (params.get('league') || 'nfl').toUpperCase();
     const year = Number(params.get('year'));
     const round = Number(params.get('round'));
-    collegeView = ['college','hall'].includes(params.get('view')) ? params.get('view') : 'draft';
+    collegeView = ['college','hall','comparison'].includes(params.get('view')) ? params.get('view') : 'draft';
     if (league === 'NFL' || league === 'NBA') state.league = league;
     if (Number.isInteger(year) && year >= 1960 && year <= 2026) state.year = year;
     if (Number.isInteger(round) && round >= 1 && round <= (state.league === 'NFL' ? 7 : 2)) state.round = round;
@@ -719,6 +719,9 @@
     $('draft-view').hidden=collegeView!=='draft';
     $('college-view').hidden=collegeView!=='college';
     $('hall-view').hidden=collegeView!=='hall';
+    $('comparison-view').hidden=collegeView!=='comparison';
+    $('view-comparison').classList.toggle('is-active',collegeView==='comparison');
+    $('view-comparison').setAttribute('aria-pressed',String(collegeView==='comparison'));
     $('view-hall').classList.toggle('is-active',collegeView==='hall');
     $('view-hall').setAttribute('aria-pressed',String(collegeView==='hall'));
     $('view-draft').classList.toggle('is-active',collegeView==='draft');
@@ -726,6 +729,7 @@
     $('view-draft').setAttribute('aria-pressed',String(collegeView==='draft'));
     $('view-college').setAttribute('aria-pressed',String(collegeView==='college'));
     if(collegeView==='hall'){renderHall();return;}
+    if(collegeView==='comparison'){DraftCompare.render(state.league);return;}
     if(collegeView!=='college')return;
     if (!collegeCatalog?.leagues?.[state.league]) {
       $('college-status').textContent='College rankings are loading or unavailable. The draft board remains accessible.';
@@ -833,6 +837,7 @@
     $('view-draft').addEventListener('click',()=>{collegeView='draft';renderCollege();syncCollegeUrl();});
     $('view-college').addEventListener('click',()=>{collegeView='college';renderCollege();syncCollegeUrl();});
     $('view-hall').addEventListener('click',()=>{collegeView='hall';renderCollege();syncCollegeUrl();});
+    $('view-comparison').addEventListener('click',()=>{collegeView='comparison';renderCollege();syncCollegeUrl();});
     for(const id of ['hall-tier','hall-era','hall-sort','hall-search'])$(id).addEventListener(id==='hall-search'?'input':'change',renderHall);
     for(let y=2026;y>=2000;y--){const opt=safeText('option','',String(y));opt.value=String(y);$('hall-era').appendChild(opt);}
     $('college-era').addEventListener('change',e=>{collegeEra=e.target.value;selectedCollege=null;renderCollege();});
@@ -842,7 +847,7 @@
   }
   function syncCollegeUrl(){
     const url=new URL(window.location.href);
-    if(collegeView==='college'||collegeView==='hall')url.searchParams.set('view',collegeView);
+    if(['college','hall','comparison'].includes(collegeView))url.searchParams.set('view',collegeView);
     else url.searchParams.delete('view');
     window.history.replaceState(null,'',url.pathname+url.search+url.hash);
   }

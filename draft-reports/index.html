@@ -10,7 +10,8 @@
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css?v=hof1">
   <script src="./hall-of-fame.js?v=vnext2" defer></script>
-  <script src="./app.js?v=vnext2" defer></script>
+  <script src="./career-comparison.js?v=compare1" defer></script>
+  <script src="./app.js?v=compare1" defer></script>
 </head>
 <body>
 <a class="skip" href="#board">Skip to draft board</a>
@@ -37,7 +38,7 @@
       <div class="board-heading"><div><h2 id="board-title">Draft explorer<span class="accent">.</span></h2><p>Choose a league, draft year, and round. Select any player to open their career profile.</p></div><div class="league-tabs" role="tablist" aria-label="League"><button id="tab-nfl" class="league-tab is-active" role="tab" aria-selected="true" aria-controls="draft-content" data-league="NFL" type="button"><span class="sport-symbol">◆</span> NFL</button><button id="tab-nba" class="league-tab" role="tab" aria-selected="false" aria-controls="draft-content" data-league="NBA" type="button"><span class="sport-symbol">◉</span> NBA</button></div></div>
 
       <div id="draft-content" role="tabpanel" aria-labelledby="tab-nfl">
-        <div class="draft-view-toggle" role="group" aria-label="Explorer view"><button type="button" id="view-draft" class="view-toggle is-active" aria-pressed="true">Draft View</button><button type="button" id="view-college" class="view-toggle" aria-pressed="false">College View</button><button type="button" id="view-hall" class="view-toggle" aria-pressed="false">Hall of Fame</button></div>
+        <div class="draft-view-toggle" role="group" aria-label="Explorer view"><button type="button" id="view-draft" class="view-toggle is-active" aria-pressed="true">Draft View</button><button type="button" id="view-college" class="view-toggle" aria-pressed="false">College View</button><button type="button" id="view-hall" class="view-toggle" aria-pressed="false">Hall of Fame</button><button type="button" id="view-comparison" class="view-toggle" aria-pressed="false">Player Comparison</button></div>
         <div id="draft-view">
         <div class="filters">
           <div class="filter-block"><label for="year-filter">DRAFT YEAR</label><div class="select-shell"><select id="year-filter" aria-label="Draft year"></select></div></div>
@@ -88,6 +89,25 @@
           <div class="table-scroll college-table-wrap"><table class="draft-table college-table"><thead><tr><th>RANK</th><th>COLLEGE</th><th>DRAFT PICKS</th><th>ROUND 1</th><th>QUALITY PLAYERS</th><th>ELITE STARS</th><th>DEPTH</th><th>GREATNESS</th><th>PRO BOWLS / ALL-STARS</th><th>OTHER HONORS</th><th>PRO PRODUCTION</th></tr></thead><tbody id="college-rows"></tbody></table></div>
           <div id="college-detail" class="college-detail" aria-live="polite" hidden></div>
           <p class="cohort-caveat">Drafted players only, 2000–2026: undrafted players are not counted. Quality players are defined as career-quality score ≥50 and elite stars as ≥75. Depth and greatness are descriptive scores based on the currently selected cohort and position, not audited forecasts or claims about recruiting efficiency. Players still building careers may have lower accumulated totals. Honors and professional production are based on available verified records. NFL championship counts and NBA championship stints are team-roster proxies, not independently verified rings. NBA college rankings exclude identifiable prep schools, foreign professional clubs and G League teams. NBA position rankings are unavailable until position identities are verified.</p>
+        </section>
+
+        <section id="comparison-view" class="college-view" aria-labelledby="comparison-heading" hidden>
+          <div class="college-head"><div class="small-kicker">CAREER TRAJECTORIES / MATCHED MILESTONES</div><h3 id="comparison-heading">How do they stack up <em>at the same stage?</em></h3><p>Compare cumulative regular-season production at the same number of seasons played or verified game milestones. Historical greats and modern stars appear when their early-career history is available.</p></div>
+          <div class="college-filters">
+            <div class="filter-block"><label for="compare-focus-search">SEARCH FOCUS PLAYER</label><div class="search-shell"><input type="search" id="compare-focus-search" placeholder="Jefferson, Gibbs…" autocomplete="off"></div></div><div class="filter-block"><label for="compare-player">FOCUS PLAYER</label><div class="select-shell"><select id="compare-player"></select></div></div>
+            <div class="filter-block"><label for="compare-basis">CAREER STAGE</label><div class="select-shell"><select id="compare-basis"><option value="seasons">Seasons played</option><option value="games">Games played</option></select></div></div>
+            <div class="filter-block"><label for="compare-stage">MATCHED MILESTONE</label><div class="select-shell"><select id="compare-stage"></select></div></div>
+            <div class="filter-block"><label for="compare-metric">STATISTIC</label><div class="select-shell"><select id="compare-metric"></select></div></div>
+          </div>
+          <div class="college-filters">
+            <div class="filter-block"><label for="compare-peer-search">SEARCH COMPARISON PLAYER</label><div class="search-shell"><input type="search" id="compare-peer-search" placeholder="Rice, Sanders…" autocomplete="off"></div></div><div class="filter-block"><label for="compare-peer">ADD COMPARISON PLAYER</label><div class="select-shell"><select id="compare-peer"></select></div></div>
+            <button class="view-toggle" id="compare-add" type="button">Add player</button><button class="view-toggle" id="compare-greats" type="button">Suggest greats</button>
+          </div>
+          <div id="compare-status" class="college-status" role="status"></div>
+          <div id="compare-selected" class="draft-view-toggle" aria-label="Selected comparison players"></div>
+          <div id="compare-chart" style="width:100%;overflow-x:auto;margin:16px 0"></div>
+          <div class="table-scroll"><table class="draft-table"><thead id="compare-head"></thead><tbody id="compare-rows"></tbody></table></div>
+          <p class="cohort-caveat">Regular-season totals only. NFL incomplete current seasons are excluded from completed-season comparisons. Games mode uses verified cumulative checkpoints (NFL every 5 games; NBA every 25); unavailable histories are never estimated or filled with zero. Same seasons means seasons actually played, not age or years since draft. Suggested greats use position group (NFL), historical Hall of Fame source flags where available, and existing career quality; they are not forecasts. Season length, era, usage, injuries and team context differ; these are descriptive raw totals, not era-adjusted ratings. Selected older NFL legends: official NFL.com career season summaries. Modern NFL data: nflverse (CC BY 4.0). Basketball: NBA Stats via SportsDataverse and historical season research.</p>
         </section>
 
         <section id="hall-view" class="college-view" aria-labelledby="hall-heading" hidden>
