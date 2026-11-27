@@ -158,12 +158,94 @@ Draft identities checked against published yearly player exports.
     if(coverage<50||parts.length<(p.league==='NBA'?3:2))return null;
     return {value:Math.round(total/coverage*10)/10,coverage,parts,method:'observed-career-components-v1'};
   }
+
+  // Supplemental historical evidence index: distinct from the v4/v3 quality model.
+  // Compare only observed facts to the mature 2000–2017 reference. No invented zeros,
+  // no use of Hall status as an input, and no contender-tier use.
+  const evidenceWeights={longevity:35,production:40,recognition:25};
+  function evidenceGroup(p,history){
+    if(p.league==='NBA')return 'ALL';
+    if(p.position_group)return p.position_group;
+    const g=positionGroups('NFL',positionLabel(p,history));
+    for(const k of ['QB','RB','WR','TE','OL','DL','LB','DB'])if(g.has(k))return k;
+    if(g.has('K')||g.has('P')||g.has('RET'))return 'ST';
+    return 'ALL';
+  }
+  const evidenceProduction={NBA:{ALL:['points','rebounds','assists']},NFL:{QB:['passing_yards','passing_tds'],RB:['rushing_yards','rushing_tds','receiving_yards'],WR:['receiving_yards','receiving_tds','receptions'],TE:['receiving_yards','receiving_tds','receptions'],DB:['interceptions'],LB:['interceptions'],DL:['interceptions'],ST:['field_goals_made'],OL:[],ALL:[]}};
+  function evidenceMetrics(p,history,group){
+    const historical=!!history,c=historical?(history.career_summary||{}):(p.career||{}),s=c.stats||{},a=historical?(history.historical_award_facts||{}):(c.awards||{});
+    const legacy=historical&&history.career_data_status==='legacy_statistics_unreviewed';
+    const result={longevity:{},production:{},recognition:{}};
+    const set=(domain,k,v)=>{if(Number.isFinite(v)&&v>=0)result[domain][k]=v;};
+    if(Number.isFinite(c.games)&&c.games>0){
+      set('longevity','games',c.games);
+      if(!legacy)for(const k of evidenceProduction[p.league]?.[group]||[]){
+        const modernKey={interceptions:'def_interceptions',field_goals_made:'fg_made'}[k]||k;
+        const v=historical?c[k]:(c[k]??s[modernKey]);
+        // Per-game rates and totals are distinct; use rates to avoid counting longevity twice.
+        set('production',k,Number.isFinite(v)?v/c.games:undefined);
+      }
+    }
+    if(p.league==='NFL'){
+      // Reported historical All-Pro selection scope may differ from modern AP selection scope.
+      // This is an explicitly separate recognition proxy, never an AP model input.
+      const ap=historical?(a.first_team_all_pro_reported?.value??a.first_team_all_pro?.value):a.first_team_all_pro;
+      const pb=historical?(a.pro_bowl_selections?.value??a.pro_bowls?.value):a.pro_bowls;
+      set('recognition','first_team',ap);set('recognition','all_star',pb);
+    }else{
+      const count=k=>historical?(a[k]?.value??history.award_counts_through_2024?.[k]):a[k];
+      set('recognition','first_team',count('all_nba_first'));
+      set('recognition','all_star',count('all_star'));
+    }
+    return result;
+  }
+  function evidenceReference(picks){
+    const ref=new Map();
+    for(const p of picks){
+      if(p.year<2000||p.year>2017||!Number.isFinite(p.career?.games)||p.career.games<=0)continue;
+      const group=evidenceGroup(p,null);
+      for(const g of new Set([group,'ALL'])){
+        const m=evidenceMetrics(p,null,g);
+        for(const [domain,metrics] of Object.entries(m))for(const [key,v] of Object.entries(metrics)){
+          const id=p.league+'/'+g+'/'+domain+'/'+key;
+          if(!ref.has(id))ref.set(id,[]);
+          ref.get(id).push(v);
+        }
+      }
+    }
+    for(const v of ref.values())v.sort((a,b)=>a-b);
+    return ref;
+  }
+  function historicalEvidenceEstimate(p,history,ref){
+    if(!history||history.draft_id||!history.induction_year||!hallScope({p,history})||history.score_review)return null;
+    const group=evidenceGroup(p,history),m=evidenceMetrics(p,history,group),parts=[];
+    let coverage=0,total=0;
+    for(const [domain,metrics] of Object.entries(m)){
+      const observed=[];
+      for(const [key,value] of Object.entries(metrics)){
+        let peerGroup=group,values=ref.get(p.league+'/'+peerGroup+'/'+domain+'/'+key)||[];
+        // Position production never borrows a different position's reference.
+        if(values.length<30&&domain!=='production'){peerGroup='ALL';values=ref.get(p.league+'/ALL/'+domain+'/'+key)||[];}
+        if(values.length<30)continue;
+        const less=values.filter(v=>v<value).length,equal=values.filter(v=>v===value).length;
+        observed.push({key,value,percentile:100*(less+equal/2)/values.length,peers:values.length,peerGroup});
+      }
+      if(!observed.length)continue;
+      const percentile=observed.reduce((a,b)=>a+b.percentile,0)/observed.length,weight=evidenceWeights[domain];
+      parts.push({domain,weight,percentile,metrics:observed});coverage+=weight;total+=weight*percentile;
+    }
+    // Two independent domains, including longevity. No honors-only or single-stat rating.
+    if(!parts.some(x=>x.domain==='longevity')||parts.length<2||coverage<60)return null;
+    return {value:Math.round(total/coverage*10)/10,coverage,parts,method:'historical-evidence-v1',scope:'Observed evidence only; not the NFL v4/NBA v3 quality score'};
+  }
+
   function attachHistoricalEstimates(rows,picks){
-    const ref=historicalReference(picks);
+    const ref=historicalReference(picks),evidenceRef=evidenceReference(picks);
     for(const row of rows){
       if(!row.historicalOnly)continue;
       const estimate=observedHistoricalEstimate(row.p,row.history,ref);
       if(estimate&&(!Number.isFinite(row.history?.partial_score)||estimate.coverage>(row.history.coverage??0)))row.history.observed_estimate=estimate;
+      if(!row.history.observed_estimate&&!Number.isFinite(row.history.partial_score)){const e=historicalEvidenceEstimate(row.p,row.history,evidenceRef);if(e)row.history.evidence_estimate=e;}
     }
     return rows;
   }
@@ -199,10 +281,11 @@ Draft identities checked against published yearly player exports.
     if(Number.isFinite(full))return {kind:'full',value:full,label:full.toFixed(1)};
     if(Number.isFinite(history?.observed_estimate?.value))return {kind:'observed',value:history.observed_estimate.value,label:history.observed_estimate.value.toFixed(1)+' est.'};
     if(Number.isFinite(history?.partial_score))return {kind:'partial',value:history.partial_score,label:history.partial_score.toFixed(1)+' est.'};
+    if(Number.isFinite(history?.evidence_estimate?.value))return {kind:'evidence',value:history.evidence_estimate.value,label:history.evidence_estimate.value.toFixed(1)+' evidence'};
     if(history?.pro_career_scope==='other_basketball')return {kind:'not_applicable',value:null,label:'Not NBA-rated'};
     return {kind:'missing',value:null,label:'Not yet scored'};
   }
-  const api={ledger,labels,order,models,thresholds,quality,classify,positionOptions,positionLabel,positionGroups,matchesPosition,hallScope,historicalDraftLabel,hallScore,historicalReference,observedHistoricalEstimate,attachHistoricalEstimates,historicalProfile};
+  const api={ledger,labels,order,models,thresholds,quality,classify,positionOptions,positionLabel,positionGroups,matchesPosition,hallScope,historicalDraftLabel,hallScore,historicalReference,observedHistoricalEstimate,attachHistoricalEstimates,historicalProfile,evidenceReference,historicalEvidenceEstimate};
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.DraftHall=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

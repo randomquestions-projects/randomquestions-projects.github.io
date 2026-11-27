@@ -168,3 +168,13 @@ const newAllPro=d.players.filter(p=>p.historical_award_facts?.first_team_all_pro
 assert(newAllPro.length>=260);
 for(const p of newAllPro){assert.equal(p.league,'NFL');assert(p.historical_award_facts.first_team_all_pro_reported.scope.includes('selector may differ'));}
 console.log('Reported historical honors release',JSON.stringify(d.historical_honors_release.changes));
+
+const evRows=depthRows.filter(r=>r.history.evidence_estimate);
+for(const r of evRows){const e=r.history.evidence_estimate;assert.equal(h.hallScore(r.p,r.history).kind,'evidence');assert(e.value>=0&&e.value<=100);assert(e.coverage>=60&&e.coverage<=100);assert(e.parts.length>=2);assert(e.parts.some(p=>p.domain==='longevity'));assert(e.parts.every(p=>p.metrics.every(m=>m.peers>=30)));assert(!r.history.score_review);}
+assert(evRows.length>100,'Supplemental evidence coverage did not improve substantially');
+const seasonRows=d.players.filter(p=>p.historical_season_evidence);
+assert.equal(seasonRows.length,136);
+for(const p of seasonRows){const e=p.historical_season_evidence;assert.equal(e.games,p.career_summary.games);assert(e.seasons>0);for(const v of Object.values(e.peak)){assert(Number.isFinite(v.rate));assert.equal(v.seasons.length,3);assert(v.seasons.every(n=>n>=1&&n<=e.seasons));}}
+assert.equal(h.historicalEvidenceEstimate({league:'NFL',position:'QB'}, {induction_year:1990,official_role:'player',career_summary:{games:100}}, h.evidenceReference(allPicks)),null);
+for(const league of ['NFL','NBA']){const rows=depthRows.filter(r=>r.p.league===league);const counts=rows.reduce((a,r)=>{const k=h.hallScore(r.p,r.history).kind;a[k]=(a[k]||0)+1;return a;},{});console.log('HISTORICAL_FINAL_COVERAGE '+JSON.stringify({league,total:rows.length,...counts}));}
+console.log('Reconstructed season evidence '+JSON.stringify(d.historical_season_evidence_release.audit));
