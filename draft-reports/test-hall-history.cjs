@@ -194,3 +194,14 @@ assert.equal(byName('NFL','Johnny Blood').career_summary.passing_yards,299);
 assert.equal(byName('NFL','Reggie White').historical_nfl_season_facts.career_totals.def_sacks,198);
 assert.equal(byName('NFL','Johnny Robinson').historical_nfl_season_facts.career_totals.def_interceptions,57);
 console.log('Verified NFL historical seasons:',65,'across',verifiedSeasonRows.length,'players');
+
+const finalRows=d.players.filter(p=>p.historical_nfl_reconciled_seasons);
+assert.equal(finalRows.length,107);
+assert.equal(finalRows.reduce((n,p)=>n+p.historical_nfl_reconciled_seasons.seasons.length,0),1437);
+for(const p of finalRows){const s=p.historical_nfl_reconciled_seasons;assert.equal(s.license,'CC BY-SA 4.0');assert(s.source.startsWith('https://en.wikipedia.org/wiki/'));assert.equal(new Set(s.seasons.map(x=>x.year)).size,s.seasons.length);assert.equal(s.career_totals.games,p.career_summary.games);for(const [k,v] of Object.entries(s.career_totals)){assert(s.seasons.every(x=>Number.isFinite(x.stats[k])));assert(Math.abs(s.seasons.reduce((n,x)=>n+x.stats[k],0)-v)<.01);assert.equal(p.career_summary[k],v);}assert(!p.quality_score);}
+assert.equal(byName('NFL','Johnny Unitas').historical_nfl_reconciled_seasons.career_totals.passing_yards,40239);
+assert.equal(byName('NFL','Reggie White').historical_nfl_reconciled_seasons.career_totals.sacks,198);
+assert(!('sacks' in byName('NFL','Brett Favre').historical_nfl_reconciled_seasons.career_totals));
+assert(app.includes('historical_nfl_reconciled_seasons||history?.historical_nfl_season_facts'));
+assert.equal(depthRows.length,460);assert(depthRows.every(r=>['partial','observed','evidence'].includes(h.hallScore(r.p,r.history).kind)));
+console.log('FINAL_INTEGRATION '+JSON.stringify({players:finalRows.length,seasons:1437,careerFields:d.historical_nfl_final_integration.additional_career_fields,comparisonNew:d.historical_nfl_final_integration.comparison_players,comparisonExisting:d.historical_nfl_final_integration.comparison_existing}));

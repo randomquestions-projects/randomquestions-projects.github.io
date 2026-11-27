@@ -25,3 +25,10 @@ console.log('Comparison checkpoints verified:',Object.values(datasets).map(d=>[d
 // Official Hall historical players: season checkpoints only, not exact game checkpoints.
 for(const [name,n,k,v] of [['Wayne Millner',7,'receiving_yards',1578],['Johnny Robinson',12,'def_interceptions',57],['Reggie White',15,'def_sacks',198]]){const p=by(name);assert(p&&p.hof_source_flag);assert.equal(p.quality,null);assert.equal(checkpoint(p,'seasons',n)[k],v);assert.equal(p.games.length,0);assert.equal(checkpoint(p,'games',50),null);}
 console.log('Verified historical NFL comparison additions: 3');
+
+const history=JSON.parse(fs.readFileSync(path.join(__dirname,'data/hall-history.json'),'utf8'));
+for(const a of history.historical_nfl_final_integration.comparison_audit){const p=d.players.find(x=>x.id===a.comparison_id);const row=history.players.find(x=>x.id===a.id);assert(p&&row);assert(p.hof_source_flag);assert.equal(p.seasons.at(-1).stats.games,row.career_summary.games);assert.equal(p.seasons.length,row.historical_nfl_reconciled_seasons.seasons.length);if(a.kind==='new'){assert.equal(p.quality,null);assert.equal(p.games.length,0);}}
+for(const [name,k,v] of [['Johnny Unitas','passing_yards',40239],['Joe Montana','passing_yards',40551],['Jim Brown','rushing_yards',12312],['Andre Reed','receiving_yards',13198]]){const p=d.players.find(x=>x.name===name&&x.hof_source_flag);assert(p,name);assert.equal(p.seasons.at(-1).stats[k],v);}
+assert.equal(d.players.filter(x=>x.name==='Jason Taylor').length,2);assert(d.players.some(x=>x.id==='hof:NFL:jasontaylor'&&x.position==='DL'));
+assert.equal(d.players.filter(x=>x.name==='Marcus Allen').length,2);assert(d.players.some(x=>x.id==='hof:NFL:marcusallen'&&x.position==='RB'));
+console.log('FINAL_COMPARISONS '+JSON.stringify({total:d.player_count,...d.audit.historical_release}));
