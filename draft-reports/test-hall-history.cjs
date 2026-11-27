@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'), fs=require('node:fs'), path=require('node:path');
 const d=JSON.parse(fs.readFileSync(path.join(__dirname,'data/hall-history.json'),'utf8'));
-assert.equal(d.schema_version,1);
+assert.equal(d.schema_version,2);
 assert.equal(new Set(d.players.map(p=>p.id)).size,d.players.length);
 assert(d.players.filter(p=>p.league==='NFL'&&p.induction_year).length>=330);
 assert(d.players.filter(p=>p.league==='NBA'&&p.induction_year).length>=240);
@@ -27,3 +27,7 @@ for(const entry of d.players){
  if(entry.induction_year){const status=h.classify(match.p,match.model);assert.equal(status?.tier,'inducted',entry.name);assert.equal(status.year,entry.induction_year);}
 }
 console.log('Verified modern draft linkages:',mapped.size);
+
+const estimates=d.players.filter(p=>p.score_kind==='historical_partial_estimate');assert.equal(estimates.length,169);for(const p of estimates){assert(Number.isFinite(p.partial_score)&&p.partial_score>=0&&p.partial_score<=100);assert(p.coverage>=60&&p.coverage<=100);assert(!p.draft_id);}
+assert.equal(new Set(d.upcoming.map(p=>p.draft_id)).size,d.upcoming.length);for(const e of d.upcoming){const m=picks.get(e.draft_id);assert(m&&m.p.name===e.name);assert(e.estimated_first_eligible_class>=2027&&e.estimated_first_eligible_class<=2031);assert.equal(e.estimated_first_eligible_class,e.last_observed_season+(m.p.league==='NFL'?6:3));assert.equal(e.status,'estimated_not_confirmed');}
+assert.equal(d.players.filter(p=>p.league==='NBA'&&p.induction_verification==='official_name_year').length,247);console.log('Historical estimates',estimates.length,'Upcoming',d.upcoming.length);
