@@ -111,14 +111,90 @@ Draft identities checked against published yearly player exports.
     if(d?.status==='drafted'&&d.year&&d.overall)return d.year+' · #'+d.overall;
     return history?.pro_career_scope==='other_basketball'?'Not NBA draft applicable':'Draft not verified';
   }
+  // Supplemental career-component estimate, not the full vNext model. Use the
+  // same mature reference cohort and component weights; missing is never zero.
+  const historicalWeights={NBA:{win_shares:25,vorp:15,minutes:10},NFL:{weighted_av:40,games:10}};
+  function historicalGroup(p,history){
+    if(p.league==='NBA')return 'ALL';
+    if(p.position_group)return p.position_group;
+    const g=positionGroups('NFL',positionLabel(p,history));
+    const groups=['QB','RB','WR','TE','OL','DL','LB','DB'].filter(x=>g.has(x));
+    if(g.has('K')||g.has('P')||g.has('RET'))groups.push('ST');
+    return groups.length===1?groups[0]:null;
+  }
+  function historicalReference(picks){
+    const ref=new Map();
+    for(const p of picks){
+      if(p.year<2000||p.year>2017||!p.career)continue;
+      const group=historicalGroup(p,null);
+      if(!group)continue;
+      for(const key of Object.keys(historicalWeights[p.league]||{})){
+        const v=p.career[key];if(!Number.isFinite(v))continue;
+        const k=p.league+'/'+group+'/'+key;
+        if(!ref.has(k))ref.set(k,[]);
+        ref.get(k).push(v);
+      }
+    }
+    for(const values of ref.values())values.sort((x,y)=>x-y);
+    return ref;
+  }
+  function observedHistoricalEstimate(p,history,ref){
+    if(!history||history.draft_id||!hallScope({p,history})||history.score_review||history.career_data_status==='legacy_statistics_unreviewed')return null;
+    const c=history.career_summary||{};
+    if(!Number.isFinite(c.games)||c.games<=0)return null;
+    const group=historicalGroup(p,history);
+    if(!group)return null;
+    const parts=[];let coverage=0,total=0;
+    for(const [key,weight] of Object.entries(historicalWeights[p.league]||{})){
+      const v=key==='weighted_av'?(c.weighted_av??c.wav):c[key];
+      const values=ref.get(p.league+'/'+group+'/'+key)||[];
+      if(!Number.isFinite(v)||values.length<30)continue;
+      const less=values.filter(x=>x<v).length,equal=values.filter(x=>x===v).length;
+      const percentile=100*(less+equal/2)/values.length;
+      parts.push({key,weight,percentile,peers:values.length});coverage+=weight;total+=weight*percentile;
+    }
+    if(coverage<50||parts.length<(p.league==='NBA'?3:2))return null;
+    return {value:Math.round(total/coverage*10)/10,coverage,parts,method:'observed-career-components-v1'};
+  }
+  function attachHistoricalEstimates(rows,picks){
+    const ref=historicalReference(picks);
+    for(const row of rows){
+      if(!row.historicalOnly||Number.isFinite(row.history?.partial_score))continue;
+      const estimate=observedHistoricalEstimate(row.p,row.history,ref);
+      if(estimate)row.history.observed_estimate=estimate;
+    }
+    return rows;
+  }
+  function historicalProfile(p,history){
+    const statLabels={games:'Games played',games_started:'Games started',minutes:'Career minutes',points:'Career points',rebounds:'Career rebounds',assists:'Career assists',steals:'Career steals',blocks:'Career blocks',win_shares:'Win Shares',vorp:'Value Over Replacement Player (VORP)',bpm:'Box Plus/Minus',wav:'Weighted career AV',weighted_av:'Weighted career AV',av:'Approximate Value',seasons_started:'Seasons started',first_team_all_pro:'First-team All-Pro',pro_bowls:'Pro Bowl selections',all_star:'All-Star selections',all_nba_first:'All-NBA First Team',all_nba_second:'All-NBA Second Team',all_nba_third:'All-NBA Third Team',all_defense_first:'All-Defensive First Team',all_defense_second:'All-Defensive Second Team',mvp:'Most Valuable Player',dpoy:'Defensive Player of the Year',opoy:'Offensive Player of the Year',roy:'Rookie of the Year',finals_mvp:'Finals MVP',super_bowl_titles:'Super Bowl titles'};
+    const awardKeys=new Set(['first_team_all_pro','second_team_all_pro','total_all_pro','pro_bowls','all_star','all_nba_first','all_nba_second','all_nba_third','all_nba_total','all_defense_first','all_defense_second','all_defense_total','mvp','dpoy','opoy','roy','finals_mvp','super_bowl_titles','championship_roster_seasons']);
+    const labels=k=>statLabels[k]||k.replaceAll('_',' ').replace(/^./,x=>x.toUpperCase());
+    const stats=[],awards=[],seen=new Set();
+    const c=history?.career_summary||{};
+    for(const [key,v] of Object.entries(history?.award_counts_through_2024||{})){
+      if(Number.isFinite(v)){awards.push({label:labels(key),value:v,scope:'through 2024'});seen.add(key);}
+    }
+    for(const [key,v] of Object.entries(c)){
+      if(!Number.isFinite(v)||key==='legacy_starts_field'||key==='starts')continue;
+      if(awardKeys.has(key)){if(!seen.has(key))awards.push({label:labels(key),value:v});}
+      else stats.push({label:labels(key),value:v});
+    }
+    if(p.league==='NBA'&&Number.isFinite(c.games)&&c.games>0){
+      for(const [key,label] of [['points','Points per game'],['rebounds','Rebounds per game'],['assists','Assists per game']]){
+        if(Number.isFinite(c[key]))stats.push({label,value:Math.round(c[key]/c.games*10)/10});
+      }
+    }
+    return {name:p.name,position:positionLabel(p,history),draft:historicalDraftLabel(p,history),score:hallScore(p,history),stats,awards,inductionYear:history?.induction_year??null,ballotYears:[...new Set([...(history?.ballots||[]).map(x=>x.year),...(history?.finalist_years||[])])].sort((a,b)=>a-b),note:history?.career_data_source?.scope||null};
+  }
   function hallScore(p,history){
     const full=quality(p);
     if(Number.isFinite(full))return {kind:'full',value:full,label:full.toFixed(1)};
     if(Number.isFinite(history?.partial_score))return {kind:'partial',value:history.partial_score,label:history.partial_score.toFixed(1)+' est.'};
+    if(Number.isFinite(history?.observed_estimate?.value))return {kind:'observed',value:history.observed_estimate.value,label:history.observed_estimate.value.toFixed(1)+' est.'};
     if(history?.pro_career_scope==='other_basketball')return {kind:'not_applicable',value:null,label:'Not NBA-rated'};
     return {kind:'missing',value:null,label:'Not yet scored'};
   }
-  const api={ledger,labels,order,models,thresholds,quality,classify,positionOptions,positionLabel,positionGroups,matchesPosition,hallScope,historicalDraftLabel,hallScore};
+  const api={ledger,labels,order,models,thresholds,quality,classify,positionOptions,positionLabel,positionGroups,matchesPosition,hallScope,historicalDraftLabel,hallScore,historicalReference,observedHistoricalEstimate,attachHistoricalEstimates,historicalProfile};
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.DraftHall=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -66,3 +66,28 @@ assert(!h.hallScope({p:{league:'NBA'},history:byName('NBA','Oscar Schmidt')}));
 assert(!h.hallScope({p:{league:'NFL'},history:{official_role:'coach'}}));
 assert(h.hallScope({p:{league:'NFL'},history:{official_role:'player'}}));
 assert.equal(byName('NFL','Charley Conerly').position,'QB');
+
+// Real-data regression: historical profiles do not require a modern draft ID.
+const history=byName('NBA','Alex English');
+const alex={p:{id:history.id,league:'NBA',name:history.name,position:history.position},history:structuredClone(history),historicalOnly:true};
+h.attachHistoricalEstimates([alex],[...picks.values()].map(x=>x.p));
+const score=h.hallScore(alex.p,alex.history);
+assert.equal(score.kind,'observed');assert(score.value>80&&score.value<=100);
+assert.equal(alex.history.observed_estimate.coverage,50);
+const profile=h.historicalProfile(alex.p,alex.history);
+assert.equal(profile.inductionYear,1997);
+assert.equal(profile.stats.find(x=>x.label==='Career points').value,25613);
+assert.equal(profile.stats.find(x=>x.label==='Games played').value,1193);
+assert.equal(profile.awards.find(x=>x.label==='All-Star selections').value,8);
+assert.equal(profile.score.value,score.value);
+const excluded=rowFor('Alline Banks Sprouse');
+assert.equal(h.observedHistoricalEstimate(excluded.p,excluded.history,h.historicalReference([...picks.values()].map(x=>x.p))),null);
+const insufficient={...alex.history,career_summary:{games:1193,minutes:38063},observed_estimate:undefined};
+assert.equal(h.observedHistoricalEstimate(alex.p,insufficient,h.historicalReference([...picks.values()].map(x=>x.p))),null);
+const nflHistory=byName('NFL','Reggie White');
+assert.equal(h.historicalProfile({league:'NFL',name:nflHistory.name},nflHistory).stats.find(x=>x.label==='Games played').value,232);
+const app=fs.readFileSync(path.join(__dirname,'app.js'),'utf8');
+assert(app.includes('historicalOnly?showHistoricalProfile(p,history):showProfile(p)'));
+assert(app.includes("if(!$('player-dialog').open)$('player-dialog').showModal()"));
+assert(!app.includes("safeText('a','hall-player'"));
+console.log('Historical profile regression: Alex English',score.value,'(50% coverage); in-site historical profiles and missing-data guards passed');

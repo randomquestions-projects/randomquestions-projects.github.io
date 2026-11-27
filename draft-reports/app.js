@@ -199,7 +199,50 @@
       }
     }
   }
+  function showHistoricalProfile(p,history){
+    selectedRow=document.activeElement;
+    const profile=DraftHall.historicalProfile(p,history);
+    $('profile-monogram').textContent=p.name.split(/[\s.-]+/).slice(0,2).map(s=>s[0]||'').join('').toUpperCase();
+    $('profile-name').textContent=profile.name;
+    $('profile-subtitle').textContent=p.league+' / HISTORICAL PLAYER';
+    $('profile-meta').textContent=[profile.position,profile.draft,profile.inductionYear?'Hall of Fame · '+profile.inductionYear:null].filter(Boolean).join(' · ');
+    $('profile-quality').textContent=profile.score.value===null?'—':profile.score.label;
+    $('profile-grade').textContent='—';
+    $('profile-pace').textContent='—';
+    $('profile-pace-note').textContent='Matched historical career-stage inputs not verified';
+    const first=document.querySelector('.profile-columns section:first-child .profile-placeholder');
+    const second=document.querySelector('.profile-columns section:last-child .profile-placeholder');
+    first.replaceChildren();second.replaceChildren();
+    const seasons=$('season-summary');if(seasons)seasons.replaceChildren();
+    function line(parent,label,value){
+      const item=safeText('div','detail-line','');
+      item.appendChild(safeText('span','detail-key',label));
+      item.appendChild(safeText('strong','detail-value',typeof value==='number'?value.toLocaleString(undefined,{maximumFractionDigits:3}):String(value)));
+      parent.appendChild(item);
+    }
+    for(const item of profile.stats)line(first,item.label,item.value);
+    for(const item of profile.awards)line(second,item.label+(item.scope?' ('+item.scope+')':''),item.value);
+    if(profile.inductionYear)line(second,'Hall of Fame induction',profile.inductionYear);
+    if(profile.ballotYears.length)line(second,'Ballot / finalist years',profile.ballotYears.join(', '));
+    if(!first.childElementCount)first.appendChild(safeText('p','detail-empty','Verified career statistics not yet available.'));
+    if(!second.childElementCount)second.appendChild(safeText('p','detail-empty','Verified honors not yet available.'));
+    if(profile.note)first.appendChild(safeText('p','season-disclaimer',profile.note));
+    if(history?.score_review)first.appendChild(safeText('p','season-disclaimer',history.score_review));
+    if(history?.career_data_status==='legacy_statistics_unreviewed')first.appendChild(safeText('p','season-disclaimer','Legacy statistics not independently reconciled; ambiguous starts field omitted.'));
+    const score=profile.score,coverage=score.kind==='observed'?history.observed_estimate.coverage:history?.coverage;
+    const sourceNote=document.querySelector('.profile-source > span:nth-child(2)');
+    if(sourceNote)sourceNote.textContent=score.kind==='observed'?'Career quality estimate · '+coverage+'% of model weight · mature 2000–2017 reference · observed career components only; not a full score or likelihood tier.':score.kind==='partial'?'Historical quality estimate · '+coverage+'% of model weight · missing components excluded.':'Historical career record · full model inputs not yet verified.';
+    if(score.kind==='observed'){
+      const e=history.observed_estimate;
+      const labels={win_shares:'Win Shares',vorp:'VORP',minutes:'Minutes',weighted_av:'Weighted AV',games:'Games played'};
+      first.appendChild(safeText('h4','season-title','Quality estimate components'));
+      for(const part of e.parts)line(first,labels[part.key]||part.key,part.percentile.toFixed(1)+' percentile');
+    }
+    $('profile-source-link').hidden=true;
+    if(!$('player-dialog').open)$('player-dialog').showModal();
+  }
   function showProfile(p) {
+    $('profile-source-link').hidden=false;
     selectedRow = document.activeElement;
     $('profile-monogram').textContent = p.name.split(/[\s.-]+/).slice(0,2).map((s) => s[0] || '').join('').toUpperCase();
     $('profile-name').textContent = p.name;
@@ -905,6 +948,7 @@
         if(!row){row={p,h:{tier:'upcoming'}};rows.push(row);indexed.set(p.id,row);}
         if(row.h.tier!=='inducted')row.eligibility=e;
       }
+      DraftHall.attachHistoricalEstimates(rows,picks);
       hallCache.set(league,rows);
     })();
     hallLoading.set(league,job);
@@ -957,50 +1001,36 @@
     }
     const rows=scoped.filter(({p,h,eligibility,history})=>(tier==='all'||(tier==='upcoming'?!!eligibility:h.tier===tier))&&(!q||[p.name,p.team||'',DraftHall.positionLabel(p,history),p.college||''].some(x=>x.toLowerCase().includes(q))));
     const qv=p=>DraftHall.quality(p)??-1, pv=p=>p.pace?.score??-1;
+    const ev=row=>{const s=DraftHall.hallScore(row.p,row.history);return ['partial','observed'].includes(s.kind)?s.value:-1;};
     rows.sort((a,b)=>{
       const x=a.p,y=b.p;
       if(sort==='name')return x.name.localeCompare(y.name);
       if(sort==='year')return (y.year||b.history?.historical_draft?.year||0)-(x.year||a.history?.historical_draft?.year||0)||(x.overall||a.history?.historical_draft?.overall||0)-(y.overall||b.history?.historical_draft?.overall||0);
-      if(sort==='quality')return qv(y)-qv(x)||(b.history?.partial_score??-1)-(a.history?.partial_score??-1)||pv(y)-pv(x)||x.name.localeCompare(y.name);
-      if(sort==='partial')return (b.history?.partial_score??-1)-(a.history?.partial_score??-1)||x.name.localeCompare(y.name);
+      if(sort==='quality')return qv(y)-qv(x)||ev(b)-ev(a)||pv(y)-pv(x)||x.name.localeCompare(y.name);
+      if(sort==='partial')return ev(b)-ev(a)||x.name.localeCompare(y.name);
       if(sort==='eligibility')return (a.eligibility?.estimated_first_eligible_class??9999)-(b.eligibility?.estimated_first_eligible_class??9999)||x.name.localeCompare(y.name);
       if(sort==='pace')return pv(y)-pv(x)||qv(y)-qv(x)||x.name.localeCompare(y.name);
-      return [...DraftHall.order,'ballot','upcoming'].indexOf(a.h.tier)-[...DraftHall.order,'ballot','upcoming'].indexOf(b.h.tier)||(a.h.tier==='early'?pv(y)-pv(x):qv(y)-qv(x))||(b.history?.partial_score??-1)-(a.history?.partial_score??-1)||x.name.localeCompare(y.name);
+      return [...DraftHall.order,'ballot','upcoming'].indexOf(a.h.tier)-[...DraftHall.order,'ballot','upcoming'].indexOf(b.h.tier)||(a.h.tier==='early'?pv(y)-pv(x):qv(y)-qv(x))||ev(b)-ev(a)||x.name.localeCompare(y.name);
     });
-    $('hall-status').textContent=league+' · '+population.length+' player entries · '+population.filter(x=>DraftHall.hallScore(x.p,x.history).kind==='full').length+' full scores · '+population.filter(x=>DraftHall.hallScore(x.p,x.history).kind==='partial').length+' historical estimates · '+population.filter(x=>DraftHall.hallScore(x.p,x.history).kind==='missing').length+' not yet scored';
+    $('hall-status').textContent=league+' · '+population.length+' player entries · '+population.filter(x=>DraftHall.hallScore(x.p,x.history).kind==='full').length+' full scores · '+population.filter(x=>['partial','observed'].includes(DraftHall.hallScore(x.p,x.history).kind)).length+' historical estimates · '+population.filter(x=>DraftHall.hallScore(x.p,x.history).kind==='missing').length+' not yet scored';
     $('hall-count').textContent=rows.length+' players';
     const target=$('hall-rows');target.replaceChildren();
     for(const {p,h,history,historicalOnly,eligibility} of rows){
       const tr=document.createElement('tr');
       const first=document.createElement('td');
-      if(historicalOnly){
-        const a=safeText('a','hall-player',p.name+' ↗');a.href=history.nba_profile_source||history.official_url||history.source;a.target='_blank';a.rel='noopener noreferrer';first.appendChild(a);
-      }else{
-        const b=safeText('button','hall-player',p.name+' ↗');b.type='button';b.addEventListener('click',()=>showProfile(p));first.appendChild(b);
-      }
+      const b=safeText('button','hall-player',p.name+' ›');b.type='button';
+      b.setAttribute('aria-label','Open '+p.name+' career profile');
+      b.addEventListener('click',()=>historicalOnly?showHistoricalProfile(p,history):showProfile(p));first.appendChild(b);
       const ballotYears=[...new Set([...(history?.ballots||[]).map(x=>x.year),...(history?.finalist_years||[])])].sort((a,b)=>b-a);
       if(ballotYears.length)first.appendChild(safeText('div','player-detail','Ballot / finalist: '+ballotYears.join(', ')));
       if(history?.induction_verification==='review')first.appendChild(safeText('div','player-detail','Induction identity under review'));
       if(eligibility)first.appendChild(safeText('div','player-detail','Estimated eligibility: '+eligibility.estimated_first_eligible_class+' · last observed '+eligibility.last_observed_season));
       if(history?.pro_career_scope==='other_basketball')first.appendChild(safeText('div','player-detail','Other basketball category · no NBA model rating'));
       if(history?.pro_career_scope==='unreviewed')first.appendChild(safeText('div','player-detail','NBA career not verified in current data'));
-      if(history?.historical_draft?.source){
-        const link=safeText('a','player-detail','Draft / bio source ↗');link.href=history.historical_draft.source;link.target='_blank';link.rel='noopener noreferrer';first.appendChild(link);
-      }
-      if(history?.score_review)first.appendChild(safeText('div','player-detail',history.score_review));
-      if(history?.career_summary||history?.award_counts_through_2024||history?.career_data_source){
-        const details=document.createElement('details');details.appendChild(safeText('summary','player-detail','Historical stats & awards'));
-        for(const [k,v] of Object.entries(history.career_summary||{}).filter(([k,v])=>k!=='legacy_starts_field'&&Number.isFinite(v)))details.appendChild(safeText('div','player-detail',k.replaceAll('_',' ')+': '+Number(v).toLocaleString()));
-        for(const [k,v] of Object.entries(history.award_counts_through_2024||{}))details.appendChild(safeText('div','player-detail',k.replaceAll('_',' ')+': '+v+' (through 2024)'));
-        if(history.career_data_source){
-          details.appendChild(safeText('div','player-detail',history.career_data_source.scope));
-          const link=safeText('a','player-detail','Statistics source ↗');link.href=history.career_data_source.source;link.target='_blank';link.rel='noopener noreferrer';details.appendChild(link);
-        }else if(history.career_data_status==='legacy_statistics_unreviewed')details.appendChild(safeText('div','player-detail','Legacy statistics not independently reconciled; ambiguous starts field omitted.'));
-        first.appendChild(details);
-      }
+      if(historicalOnly&&history?.career_summary)first.appendChild(safeText('div','player-detail','Career statistics & awards · open profile'));
       tr.appendChild(first);
       const score=DraftHall.hallScore(p,history);
-      for(const v of [DraftHall.historicalDraftLabel(p,history),DraftHall.positionLabel(p,history)||'Unknown',score.label,score.kind==='partial'?history.coverage+'% components':score.kind==='full'?'Full model':'—',pv(p)<0?'—':pv(p).toFixed(1)])tr.appendChild(safeText('td','',v));
+      for(const v of [DraftHall.historicalDraftLabel(p,history),DraftHall.positionLabel(p,history)||'Unknown',score.label,score.kind==='observed'?history.observed_estimate.coverage+'% · career only':score.kind==='partial'?history.coverage+'% components':score.kind==='full'?'Full model':'—',pv(p)<0?'—':pv(p).toFixed(1)])tr.appendChild(safeText('td','',v));
       const status=document.createElement('td');status.appendChild(safeText('span','hall-tier hall-'+h.tier,DraftHall.labels[h.tier]||(h.tier==='upcoming'?'Estimated eligibility':'Ballot history')));tr.appendChild(status);
       tr.appendChild(safeText('td','',h.year?String(h.year):'—'));target.appendChild(tr);
     }
