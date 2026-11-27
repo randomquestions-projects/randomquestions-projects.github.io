@@ -21,3 +21,7 @@ assert(suggest(d,j,'seasons',6).every(id=>d.players.find(p=>p.id===id).position=
 assert(suggest(d,g,'games',45).length>0);
 assert.equal(checkpoint(datasets.NBA.players.find(p=>p.name==='Michael Jordan'),'seasons',15).points,32292);
 console.log('Comparison checkpoints verified:',Object.values(datasets).map(d=>[d.league,d.player_count,d.audit.game_verified_players]));
+
+// Official Hall historical players: season checkpoints only, not exact game checkpoints.
+for(const [name,n,k,v] of [['Wayne Millner',7,'receiving_yards',1578],['Johnny Robinson',12,'def_interceptions',57],['Reggie White',15,'def_sacks',198]]){const p=by(name);assert(p&&p.hof_source_flag);assert.equal(p.quality,null);assert.equal(checkpoint(p,'seasons',n)[k],v);assert.equal(p.games.length,0);assert.equal(checkpoint(p,'games',50),null);}
+console.log('Verified historical NFL comparison additions: 3');

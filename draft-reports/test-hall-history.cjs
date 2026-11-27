@@ -182,3 +182,15 @@ console.log('Reconstructed season evidence '+JSON.stringify(d.historical_season_
 const dated=d.players.filter(p=>p.historical_dated_seasons);assert.equal(dated.length,79);for(const p of dated){const s=p.historical_dated_seasons;assert.equal(p.league,'NBA');assert.equal(s.career.games,p.career_summary.games);assert.equal(s.seasons.reduce((a,b)=>a+b.games,0),s.career.games);assert.equal(new Set(s.seasons.map(x=>x.year)).size,s.seasons.length);assert(s.seasons.every(x=>x.year<=p.induction_year));}console.log('Historical dated NBA season records',dated.length,1040);
 
 const playoffs=d.players.filter(p=>p.historical_playoff_seasons);assert.equal(playoffs.length,76);for(const p of playoffs){const s=p.historical_playoff_seasons;assert.equal(p.league,'NBA');assert.equal(s.seasons.reduce((a,b)=>a+b.games,0),s.career.games);assert.equal(new Set(s.seasons.map(x=>x.year)).size,s.seasons.length);assert(s.seasons.every(x=>p.historical_dated_seasons.seasons.some(y=>x.year===y.year)));}assert.equal(byName('NFL','Adam Vinatieri').career_summary.games,365);assert.equal(byName('NFL','Bart Starr').career_summary.games,196);assert.equal(byName('NFL','Duke Slater').historical_award_facts.first_team_all_pro_reported.value,4);console.log('Historical NBA playoff records',playoffs.length,790);
+
+// Official Hall season facts: exact reported totals, no synthetic full model score.
+const verifiedSeasonRows=d.players.filter(p=>p.historical_nfl_season_facts);
+assert.equal(verifiedSeasonRows.length,6);
+assert.equal(verifiedSeasonRows.reduce((n,p)=>n+p.historical_nfl_season_facts.seasons.length,0),65);
+for(const p of verifiedSeasonRows){const h=p.historical_nfl_season_facts;assert.equal(p.league,'NFL');assert.equal(h.source,p.official_url);assert.equal(new Set(h.seasons.map(s=>s.year)).size,h.seasons.length);assert(h.seasons.every(s=>s.year<=p.induction_year));for(const [k,v] of Object.entries(h.career_totals)){assert.equal(h.seasons.reduce((n,s)=>n+s.stats[k],0),v);assert.equal(p.career_summary[({def_sacks:'sacks',def_interceptions:'interceptions'})[k]||k],v);}assert(!p.quality_score);}
+assert.equal(byName('NFL','Joe Guyon').historical_nfl_season_facts.seasons.length,7);
+assert.equal(byName('NFL','Joe Guyon').career_summary.seasons_played,8);
+assert.equal(byName('NFL','Johnny Blood').career_summary.passing_yards,299);
+assert.equal(byName('NFL','Reggie White').historical_nfl_season_facts.career_totals.def_sacks,198);
+assert.equal(byName('NFL','Johnny Robinson').historical_nfl_season_facts.career_totals.def_interceptions,57);
+console.log('Verified NFL historical seasons:',65,'across',verifiedSeasonRows.length,'players');
