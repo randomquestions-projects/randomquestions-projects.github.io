@@ -243,6 +243,7 @@
     }
     if(score.kind==='evidence'){first.appendChild(safeText('h4','season-title','Historical evidence index components'));for(const part of history.evidence_estimate.parts)line(first,part.domain,part.percentile.toFixed(1)+' percentile · '+part.weight+'% weight');}
     if(history?.historical_season_evidence){const s=history.historical_season_evidence;first.appendChild(safeText('h4','season-title','Reconstructed season milestones'));line(first,'Observed seasons',s.seasons);for(const [k,v] of Object.entries(s.peak||{}))line(first,'Best-three '+k.replaceAll('_',' ')+' per game',v.rate);first.appendChild(safeText('p','season-disclaimer',s.scope));}
+    if(history?.historical_dated_seasons){const s=history.historical_dated_seasons;first.appendChild(safeText('h4','season-title','Historical regular-season statistics'));for(const y of s.seasons){const values=[y.games+' GP',...['points','rebounds','assists','minutes'].filter(k=>Number.isFinite(y[k+'_per_game'])).map(k=>y[k+'_per_game']+' '+({points:'PPG',rebounds:'RPG',assists:'APG',minutes:'MPG'}[k]))];line(first,String(y.year),values.join(' · '));}first.appendChild(safeText('p','season-disclaimer',s.scope+' Source: Wikipedia (CC BY-SA 4.0).'));}
     $('profile-source-link').hidden=true;
     if(!$('player-dialog').open)$('player-dialog').showModal();
   }

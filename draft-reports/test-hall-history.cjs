@@ -178,3 +178,5 @@ for(const p of seasonRows){const e=p.historical_season_evidence;assert.equal(e.g
 assert.equal(h.historicalEvidenceEstimate({league:'NFL',position:'QB'}, {induction_year:1990,official_role:'player',career_summary:{games:100}}, h.evidenceReference(allPicks)),null);
 for(const league of ['NFL','NBA']){const rows=depthRows.filter(r=>r.p.league===league);const counts=rows.reduce((a,r)=>{const k=h.hallScore(r.p,r.history).kind;a[k]=(a[k]||0)+1;return a;},{});console.log('HISTORICAL_FINAL_COVERAGE '+JSON.stringify({league,total:rows.length,...counts}));}
 console.log('Reconstructed season evidence '+JSON.stringify(d.historical_season_evidence_release.audit));
+
+const dated=d.players.filter(p=>p.historical_dated_seasons);assert.equal(dated.length,79);for(const p of dated){const s=p.historical_dated_seasons;assert.equal(p.league,'NBA');assert.equal(s.career.games,p.career_summary.games);assert.equal(s.seasons.reduce((a,b)=>a+b.games,0),s.career.games);assert.equal(new Set(s.seasons.map(x=>x.year)).size,s.seasons.length);assert(s.seasons.every(x=>x.year<=p.induction_year));}console.log('Historical dated NBA season records',dated.length,1040);
