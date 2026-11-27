@@ -921,7 +921,7 @@
       const b=safeText('button','honor-metric','');b.type='button';b.setAttribute('aria-pressed',String(tier===t));
       b.appendChild(safeText('span','honor-metric-count',String(count)));
       b.appendChild(safeText('span','honor-metric-label',(DraftHall.labels[t]||'Ballot history')));
-      b.appendChild(safeText('span','honor-metric-extra',t==='inducted'?'Official':t==='early'?'Strong start':t==='ballot'?'Not model-ranked':'Model tier'));
+      b.appendChild(safeText('span','honor-metric-extra',t==='inducted'?'Directory records':t==='early'?'Strong start':t==='ballot'?'Not model-ranked':'Model tier'));
       b.addEventListener('click',()=>{$('hall-tier').value=tier===t?'all':t;renderHall();});kpis.appendChild(b);
     }
     const rows=scoped.filter(({p,h})=>(tier==='all'||h.tier===tier)&&(!q||[p.name,p.team,p.position||'',p.college||''].some(x=>x.toLowerCase().includes(q))));
